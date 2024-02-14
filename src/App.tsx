@@ -55,11 +55,11 @@ const freshDatabase = [
 
 function App() {
   const [database, setDatabase] = usePersistentState<Note[]>(
-    'database',
+    'typehere-database',
     freshDatabase,
   );
   const [currentNoteId, setCurrentNoteId] = usePersistentState<string>(
-    'currentNoteId',
+    'typehere-currentNoteId',
     freshDatabase[0].id,
   );
   const [listMenuPosition, setListMenuPosition] = useState<{
