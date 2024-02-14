@@ -216,6 +216,9 @@ function App() {
                             n.updatedAt = new Date().toISOString();
                           }
                           setDatabase([...database]);
+                          setTimeout(() => {
+                            textareaDomRef.current?.focus();
+                          }, 10);
                         }}
                       >
                         <div className="note-list-item-top">
