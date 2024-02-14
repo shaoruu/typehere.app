@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 function usePersistentState<T>(storageKey: string, defaultValue?: T) {
@@ -54,6 +54,8 @@ const freshDatabase = [
 ];
 
 function App() {
+  const textareaDomRef = useRef<HTMLTextAreaElement>(null);
+
   const [database, setDatabase] = usePersistentState<Note[]>(
     'typehere-database',
     freshDatabase,
@@ -72,8 +74,11 @@ function App() {
     const currentNote = database.find((note) => note.id === currentNoteId);
     if (currentNote) {
       setTextValue(currentNote.content);
+    } else {
+      setCurrentNoteId(database[0].id);
+      setTextValue(database[0].content);
     }
-  }, [currentNoteId, database]);
+  }, [currentNoteId, database, setCurrentNoteId]);
 
   const deleteNote = (noteId: string) => {
     const updatedDatabase = database.filter((note) => note.id !== noteId);
@@ -84,10 +89,17 @@ function App() {
     }
   };
 
+  useEffect(() => {
+    if (textareaDomRef.current) {
+      textareaDomRef.current.focus();
+    }
+  }, [currentNoteId]);
+
   return (
     <main>
       <textarea
         id="editor"
+        ref={textareaDomRef}
         value={textValue}
         onChange={(e) => {
           setTextValue(e.target.value);
@@ -101,6 +113,31 @@ function App() {
             const newDatabase = [...database];
             newDatabase.splice(noteIndex, 1, updatedNote);
             setDatabase(newDatabase);
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Tab') {
+            e.preventDefault();
+            const textarea = e.currentTarget as HTMLTextAreaElement;
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const spaceCount = 2;
+
+            // set textarea value to: text before caret + spaces * spaceCount + text after caret
+            const newValue =
+              textarea.value.substring(0, start) +
+              ' '.repeat(spaceCount) +
+              textarea.value.substring(end);
+
+            // Update the state and the textarea value
+            setTextValue(newValue);
+
+            // Update the textarea's value directly to ensure the caret is moved correctly
+            textarea.value = newValue;
+
+            // put caret at right position again
+            textarea.selectionStart = textarea.selectionEnd =
+              start + spaceCount;
           }
         }}
         placeholder="Type here..."
