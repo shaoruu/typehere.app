@@ -1,0 +1,113 @@
+* {
+  padding: 0px;
+  margin: 0px;
+  box-sizing: border-box;
+  font-family: monospace;
+}
+
+html,
+body,
+main {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#editor {
+  width: 100vw;
+  height: 100vh;
+  overflow: auto;
+  border: none;
+  padding: 2rem;
+  font-size: 1.5rem;
+  resize: none;
+}
+
+#controls {
+  display: flex;
+  gap: 6px;
+  position: fixed;
+  bottom: 0px;
+  right: 0px;
+  margin: 8px;
+}
+
+#controls button {
+  cursor: pointer;
+  background: none;
+  border: 1px solid #888;
+  border-radius: 6px;
+  padding: 2px 4px;
+}
+
+#controls button:hover {
+  background-color: #f0f0f0;
+}
+
+.notes-list {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 6px;
+  border: 1px solid #888;
+  max-height: 50vh;
+  overflow: auto;
+}
+
+.note-list-item {
+  padding: 6px 8px;
+  background-color: #fff;
+  cursor: pointer;
+  border-radius: 4px;
+  width: 200px;
+  display: flex;
+  border: 1px solid transparent;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.note-list-item:hover {
+  border-color: #888;
+}
+
+.note-list-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  overflow: hidden;
+}
+
+.note-list-item-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note-list-item-delete-btn {
+  cursor: pointer;
+  background-color: #ff4d4d;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  padding: 2px 4px;
+  font-size: 0.8rem;
+  margin-left: 4px; /* Ensure spacing between text and button */
+}
+
+.note-list-item-delete-btn:hover {
+  background-color: #ff0000;
+}
+
+.note-list-item-timestamp {
+  font-size: 0.8rem;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty-note {
+  color: #666;
+  font-style: italic;
+}
