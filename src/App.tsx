@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { EnhancedTextarea } from './EnhancedTextarea';
 
 function usePersistentState<T>(storageKey: string, defaultValue?: T) {
   const [data, setData] = useState<T>(() => {
@@ -97,17 +98,15 @@ function App() {
 
   return (
     <main>
-      <textarea
+      <EnhancedTextarea
         id="editor"
-        ref={textareaDomRef}
-        value={textValue}
-        onChange={(e) => {
-          setTextValue(e.target.value);
+        setText={(newText) => {
+          setTextValue(newText);
           const noteIndex = database.findIndex((n) => n.id === currentNoteId);
           if (noteIndex !== -1) {
             const updatedNote = {
               ...database[noteIndex],
-              content: e.target.value,
+              content: newText,
               updatedAt: new Date().toISOString(),
             };
             const newDatabase = [...database];
@@ -115,31 +114,7 @@ function App() {
             setDatabase(newDatabase);
           }
         }}
-        onKeyDown={(e) => {
-          if (e.key === 'Tab') {
-            e.preventDefault();
-            const textarea = e.currentTarget as HTMLTextAreaElement;
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            const spaceCount = 2;
-
-            // set textarea value to: text before caret + spaces * spaceCount + text after caret
-            const newValue =
-              textarea.value.substring(0, start) +
-              ' '.repeat(spaceCount) +
-              textarea.value.substring(end);
-
-            // Update the state and the textarea value
-            setTextValue(newValue);
-
-            // Update the textarea's value directly to ensure the caret is moved correctly
-            textarea.value = newValue;
-
-            // put caret at right position again
-            textarea.selectionStart = textarea.selectionEnd =
-              start + spaceCount;
-          }
-        }}
+        text={textValue}
         placeholder="Type here..."
       />
       <div id="controls">
