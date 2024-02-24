@@ -130,6 +130,18 @@ function App() {
     [database, setCurrentNoteId, setDatabase],
   );
 
+  const openNextNote = useCallback(() => {
+    const newNote: Note = {
+      id: getRandomId(),
+      content: '',
+      updatedAt: new Date().toISOString(),
+    };
+    setDatabase([...database, newNote]);
+    setCurrentNoteId(newNote.id);
+    setTextValue('');
+    openNote(newNote.id);
+  }, [database, openNote, setCurrentNoteId, setDatabase]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isCmdKMenuOpen && e.key === 'Escape') {
@@ -246,6 +258,16 @@ function App() {
         return;
       }
 
+      if (
+        e.key === 'h' &&
+        (e.metaKey || e.ctrlKey) &&
+        textValue.trim().length > 0
+      ) {
+        e.preventDefault();
+        openNextNote();
+        return;
+      }
+
       if (e.key === 'Enter') {
         console.log(textareaDomRef.current);
         textareaDomRef.current?.focus();
@@ -284,9 +306,11 @@ function App() {
     hasVimNavigated,
     isCmdKMenuOpen,
     listMenuPosition,
+    openNextNote,
     openNote,
     selectedCmdKNoteIndex,
     selectedListNoteIndex,
+    textValue,
   ]);
 
   useEffect(() => {
@@ -360,20 +384,7 @@ function App() {
           import
         </button>
         {textValue && (
-          <button
-            tabIndex={-1}
-            onClick={() => {
-              const newNote: Note = {
-                id: getRandomId(),
-                content: '',
-                updatedAt: new Date().toISOString(),
-              };
-              setDatabase([...database, newNote]);
-              setCurrentNoteId(newNote.id);
-              setTextValue('');
-              openNote(newNote.id);
-            }}
-          >
+          <button tabIndex={-1} onClick={openNextNote}>
             new
           </button>
         )}
