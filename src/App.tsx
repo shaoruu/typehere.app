@@ -56,6 +56,63 @@ const freshDatabase = [
   },
 ];
 
+async function backupDataToSafeLocation(data: unknown) {
+  if (!('indexedDB' in window)) {
+    console.error("This browser doesn't support IndexedDB");
+    return;
+  }
+
+  const dbRequest = indexedDB.open('BackupDatabase', 1);
+
+  dbRequest.onupgradeneeded = (event) => {
+    const db = (event.target as IDBOpenDBRequest).result;
+    if (!db.objectStoreNames.contains('backups')) {
+      db.createObjectStore('backups', { autoIncrement: true });
+    }
+  };
+
+  dbRequest.onerror = (event) => {
+    console.error('Error opening IndexedDB for backup', event);
+  };
+
+  dbRequest.onsuccess = (event) => {
+    const db = (event.target as IDBOpenDBRequest).result;
+    const transaction = db.transaction('backups', 'readwrite');
+    const store = transaction.objectStore('backups');
+    const request = store.add({ date: new Date().toISOString(), data });
+
+    request.onsuccess = () => {
+      console.log('Data backed up successfully in IndexedDB');
+    };
+
+    request.onerror = (event) => {
+      console.error('Error backing up data in IndexedDB', event);
+    };
+  };
+}
+
+function usePeriodicBackup<T>(data: T, interval: number = 24 * 60 * 60 * 1000) {
+  useEffect(() => {
+    const lastBackupDateStr = localStorage.getItem('lastBackupDate');
+    const lastBackupDate = lastBackupDateStr
+      ? new Date(lastBackupDateStr)
+      : new Date(0);
+    const now = new Date();
+
+    if (now.getTime() - lastBackupDate.getTime() > interval) {
+      backupDataToSafeLocation(data);
+      localStorage.setItem('lastBackupDate', now.toISOString());
+    }
+
+    const intervalId = setInterval(() => {
+      backupDataToSafeLocation(data);
+      localStorage.setItem('lastBackupDate', new Date().toISOString());
+    }, interval);
+
+    return () => clearInterval(intervalId);
+  }, [data, interval]);
+}
+
 function App() {
   const textareaDomRef = useRef<HTMLTextAreaElement>(null);
 
@@ -63,6 +120,8 @@ function App() {
     'typehere-database',
     freshDatabase,
   );
+  usePeriodicBackup(database);
+
   const [currentNoteId, setCurrentNoteId] = usePersistentState<string>(
     'typehere-currentNoteId',
     freshDatabase[0].id,
