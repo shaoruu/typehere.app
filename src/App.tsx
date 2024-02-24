@@ -633,7 +633,7 @@ function App() {
                   backgroundColor: 'var(--note-background-color)',
                   boxShadow: '0 4px 6px var(--box-shadow-color)',
                 }}
-                className="notes-list"
+                className="notes-list no-scrollbar"
               >
                 {database
                   .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
@@ -743,7 +743,7 @@ function App() {
                 }}
               />
               <div
-                className="notes-list"
+                className="notes-list no-scrollbar"
                 style={{
                   maxHeight: '300px',
                   overflow: 'auto',
