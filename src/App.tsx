@@ -157,7 +157,7 @@ function App() {
 
   const [selectedListNoteIndex, setSelectedListNoteIndex] = useState<number>(0);
   const [selectedCmdKNoteIndex, setSelectedCmdKNoteIndex] = useState<number>(0);
-  const [cmdkSearchQuery, setCmdKSearchQuery] = useState('');
+  const [cmdKSearchQuery, setCmdKSearchQuery] = useState('');
   const [isCmdKMenuOpen, setIsCmdKMenuOpen] = useState(false);
   const [hasVimNavigated, setHasVimNavigated] = useState(false);
 
@@ -167,10 +167,10 @@ function App() {
       includeScore: true,
       threshold: 0.3,
     });
-    return cmdkSearchQuery
-      ? fuse.search(cmdkSearchQuery).map((result) => result.item)
+    return cmdKSearchQuery
+      ? fuse.search(cmdKSearchQuery).map((result) => result.item)
       : database;
-  }, [database, cmdkSearchQuery]);
+  }, [database, cmdKSearchQuery]);
 
   const openNote = (noteId: string) => {
     setCurrentNoteId(noteId);
@@ -575,7 +575,7 @@ function App() {
               <input
                 autoFocus
                 placeholder="Search for note"
-                value={cmdkSearchQuery}
+                value={cmdKSearchQuery}
                 onChange={(e) => {
                   setCmdKSearchQuery(e.target.value);
                   setSelectedCmdKNoteIndex(0);
