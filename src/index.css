@@ -61,6 +61,10 @@ input {
   background: var(--note-background-color);
 }
 
+.ace_text-layer {
+  margin: 0 !important;
+}
+
 .ace_cursor {
   /* background-color: white;
   border: 1px solid white !important; */
