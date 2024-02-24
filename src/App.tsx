@@ -1,11 +1,4 @@
-import {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-  useMemo,
-  KeyboardEventHandler,
-} from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { EnhancedTextarea } from './EnhancedTextarea';
 import LZString from 'lz-string';
