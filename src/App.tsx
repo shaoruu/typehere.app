@@ -154,9 +154,7 @@ function App() {
   const fileInputDomRef = useRef<HTMLInputElement>(null);
   const listDomRef = useRef<HTMLButtonElement>(null);
 
-  const [selectedListNoteIndex, setSelectedListNoteIndex] = useState<
-    number | null
-  >(null);
+  const [selectedListNoteIndex, setSelectedListNoteIndex] = useState<number>(0);
   const [selectedCmdKNoteIndex, setSelectedCmdKNoteIndex] = useState<number>(0);
   const [cmdkSearchQuery, setCmdKSearchQuery] = useState('');
   const [isCmdKMenuOpen, setIsCmdKMenuOpen] = useState(false);
@@ -297,6 +295,7 @@ function App() {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         textareaDomRef.current?.blur();
+        setSelectedCmdKNoteIndex(0);
         setIsCmdKMenuOpen(true);
         setCmdKSearchQuery('');
         return;
@@ -309,6 +308,7 @@ function App() {
       ) {
         const list = listDomRef.current;
         textareaDomRef.current?.blur();
+        setSelectedListNoteIndex(0);
         const rect = list.getBoundingClientRect();
         setListMenuPosition({
           x: window.innerWidth - (rect.x + rect.width),
