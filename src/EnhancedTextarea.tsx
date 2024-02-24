@@ -234,6 +234,7 @@ export const EnhancedTextarea = forwardRef<
         spellCheck={spellCheck}
         placeholder={placeholder}
         style={{
+          margin: '0px 4px',
           outline: 'none',
         }}
       />
