@@ -131,6 +131,10 @@ function App() {
     x: number;
     y: number;
   } | null>(null);
+  const [moreMenuPosition, setMoreMenuPosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const [textValue, setTextValue] = useState('');
 
   useEffect(() => {
@@ -155,11 +159,21 @@ function App() {
   const fileInputDomRef = useRef<HTMLInputElement>(null);
   const listDomRef = useRef<HTMLButtonElement>(null);
 
+  const [currentTheme, setCurrentTheme] = usePersistentState<'light' | 'dark'>(
+    'typehere-theme',
+    'light',
+  );
   const [selectedListNoteIndex, setSelectedListNoteIndex] = useState<number>(0);
   const [selectedCmdKNoteIndex, setSelectedCmdKNoteIndex] = useState<number>(0);
   const [cmdKSearchQuery, setCmdKSearchQuery] = useState('');
   const [isCmdKMenuOpen, setIsCmdKMenuOpen] = useState(false);
   const [hasVimNavigated, setHasVimNavigated] = useState(false);
+
+  const toggleTheme = () => {
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    setCurrentTheme(newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+  };
 
   const filteredDatabase = useMemo(() => {
     const fuse = new Fuse(database, {
@@ -249,7 +263,7 @@ function App() {
           const elementId = `note-list-cmdk-item-${nextIndex}`;
           const element = document.getElementById(elementId);
           if (element) {
-            element.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            element.scrollIntoView({ block: 'center' });
           }
         }
         return;
@@ -283,7 +297,7 @@ function App() {
           const elementId = `note-list-item-${nextIndex}`;
           const element = document.getElementById(elementId);
           if (element) {
-            element.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            element.scrollIntoView({ block: 'center' });
           }
         }
         return;
@@ -401,46 +415,98 @@ function App() {
       />
       <div id="controls">
         <button
-          tabIndex={-1}
-          onClick={() => {
-            const compressedData = LZString.compressToEncodedURIComponent(
-              JSON.stringify(database),
-            );
-            const dataStr = 'data:text/json;charset=utf-8,' + compressedData;
-            const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute('href', dataStr);
-            downloadAnchorNode.setAttribute('download', 'notes_export.json');
-            document.body.appendChild(downloadAnchorNode);
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            setMoreMenuPosition({
+              x: window.innerWidth - (rect.x + rect.width),
+              y: window.innerHeight - rect.y + 4,
+            });
           }}
         >
-          export
+          more
         </button>
-        <input
-          type="file"
-          style={{ display: 'none' }}
-          ref={fileInputDomRef}
-          onChange={(e) => {
-            const fileReader = new FileReader();
-            const target = e.target as HTMLInputElement;
-            if (!target.files) return;
-            fileReader.readAsText(target.files[0], 'UTF-8');
-            fileReader.onload = (e) => {
-              const decompressedContent =
-                LZString.decompressFromEncodedURIComponent(
-                  e.target?.result as string,
-                );
-              if (decompressedContent) {
-                const content = JSON.parse(decompressedContent);
-                setDatabase(content);
-              }
-            };
-          }}
-        />
-        <button tabIndex={-1} onClick={() => fileInputDomRef.current?.click()}>
-          import
-        </button>
+        {moreMenuPosition && (
+          <>
+            <div
+              style={{
+                width: '100vw',
+                height: '100vh',
+                position: 'fixed',
+                top: 0,
+                left: 0,
+              }}
+              onClick={() => {
+                setMoreMenuPosition(null);
+              }}
+            />
+            <div
+              style={{
+                position: 'fixed',
+                right: moreMenuPosition.x,
+                bottom: moreMenuPosition.y,
+                zIndex: 100,
+              }}
+              className="more-menu"
+            >
+              <button
+                onClick={() => {
+                  setMoreMenuPosition(null);
+                  toggleTheme();
+                }}
+              >
+                {currentTheme === 'light' ? 'dark' : 'light'}
+              </button>
+              <button
+                tabIndex={-1}
+                onClick={() => {
+                  const compressedData = LZString.compressToEncodedURIComponent(
+                    JSON.stringify(database),
+                  );
+                  const dataStr =
+                    'data:text/json;charset=utf-8,' + compressedData;
+                  const downloadAnchorNode = document.createElement('a');
+                  downloadAnchorNode.setAttribute('href', dataStr);
+                  downloadAnchorNode.setAttribute(
+                    'download',
+                    'notes_export.json',
+                  );
+                  document.body.appendChild(downloadAnchorNode);
+                  downloadAnchorNode.click();
+                  downloadAnchorNode.remove();
+                }}
+              >
+                export
+              </button>
+              <input
+                type="file"
+                style={{ display: 'none' }}
+                ref={fileInputDomRef}
+                onChange={(e) => {
+                  const fileReader = new FileReader();
+                  const target = e.target as HTMLInputElement;
+                  if (!target.files) return;
+                  fileReader.readAsText(target.files[0], 'UTF-8');
+                  fileReader.onload = (e) => {
+                    const decompressedContent =
+                      LZString.decompressFromEncodedURIComponent(
+                        e.target?.result as string,
+                      );
+                    if (decompressedContent) {
+                      const content = JSON.parse(decompressedContent);
+                      setDatabase(content);
+                    }
+                  };
+                }}
+              />
+              <button
+                tabIndex={-1}
+                onClick={() => fileInputDomRef.current?.click()}
+              >
+                import
+              </button>
+            </div>
+          </>
+        )}
         {textValue && (
           <button tabIndex={-1} onClick={openNewNote}>
             new
@@ -480,8 +546,8 @@ function App() {
                   right: listMenuPosition.x,
                   bottom: listMenuPosition.y,
                   zIndex: 100,
-                  backgroundColor: '#fff',
-                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                  backgroundColor: 'var(--note-background-color)',
+                  boxShadow: '0 4px 6px var(--box-shadow-color)',
                 }}
                 className="notes-list"
               >
@@ -502,8 +568,8 @@ function App() {
                         style={{
                           backgroundColor:
                             index === selectedListNoteIndex
-                              ? 'lightgray'
-                              : 'white',
+                              ? 'var(--note-selected-background-color)'
+                              : 'var(--note-background-color)',
                         }}
                       >
                         <div className="note-list-item-top">
@@ -513,7 +579,9 @@ function App() {
                               fontWeight:
                                 note.id === currentNoteId ? 'bold' : 'normal',
                               fontStyle: title ? 'normal' : 'italic',
-                              color: title ? 'black' : '#66666699',
+                              color: title
+                                ? 'var(--dark-color)'
+                                : 'var(--untitled-note-title-color)',
                             }}
                           >
                             {title || 'New Note'}
@@ -546,7 +614,7 @@ function App() {
           <>
             <div
               style={{
-                backgroundColor: 'rgba(0,0,0,0.5)',
+                backgroundColor: 'var(--overlay-background-color)',
                 position: 'fixed',
                 top: 0,
                 left: 0,
@@ -564,12 +632,12 @@ function App() {
                 top: '50%',
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
-                backgroundColor: '#fff',
-                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                backgroundColor: 'var(--note-background-color)',
+                boxShadow: '0 4px 6px var(--box-shadow-color)',
                 display: 'flex',
                 flexDirection: 'column',
                 borderRadius: 6,
-                border: '1px solid #888',
+                border: '1px solid var(--border-color)',
               }}
             >
               <input
@@ -583,7 +651,7 @@ function App() {
                 style={{
                   padding: '4px',
                   outline: 'none',
-                  border: '1px solid #888',
+                  border: '1px solid var(--border-color)',
                   borderRadius: 4,
                   margin: '6px',
                   marginBottom: 0,
@@ -602,7 +670,13 @@ function App() {
                 }}
               >
                 {filteredDatabase.length === 0 && (
-                  <div style={{ opacity: 0.5, padding: '4px' }}>
+                  <div
+                    style={{
+                      opacity: 0.5,
+                      padding: '4px',
+                      color: 'var(--dark-color)',
+                    }}
+                  >
                     No notes found...
                   </div>
                 )}
@@ -623,8 +697,8 @@ function App() {
                         style={{
                           backgroundColor:
                             index === selectedCmdKNoteIndex
-                              ? 'lightgray'
-                              : 'white',
+                              ? 'var(--note-selected-background-color)'
+                              : 'var(--note-background-color)',
                         }}
                       >
                         <div className="note-list-item-top">
@@ -634,7 +708,9 @@ function App() {
                               fontWeight:
                                 note.id === currentNoteId ? 'bold' : 'normal',
                               fontStyle: title ? 'normal' : 'italic',
-                              color: title ? 'black' : '#66666699',
+                              color: title
+                                ? 'var(--dark-color)'
+                                : 'var(--untitled-note-title-color)',
                             }}
                           >
                             {title || 'New Note'}

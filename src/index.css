@@ -5,12 +5,58 @@
   font-family: monospace;
 }
 
+:root {
+  --border-color: #888888;
+  --hover-background-color: #f0f0f0;
+  --note-background-color: #ffffff;
+  --note-selected-background-color: '#e0e0e0';
+  --delete-btn-background-color: #ff4d4d;
+  --delete-btn-hover-background-color: #ff0000;
+  --timestamp-color: #666666;
+  --overlay-background-color: rgba(0, 0, 0, 0.5);
+  --box-shadow-color: rgba(0, 0, 0, 0.1);
+  --untitled-note-title-color: #66666699; /* Removed quotes for consistency */
+  --dark-color: #000000;
+  --light-color: #ffffff;
+}
+
+:root[data-theme='dark'] {
+  --border-color: #555555;
+  --hover-background-color: #333333;
+  --note-background-color: #222222;
+  --note-selected-background-color: #555555;
+  --delete-btn-background-color: #fe3f3f; /* Weaker red for dark mode */
+  --delete-btn-hover-background-color: #ff2020; /* Slightly stronger red for hover in dark mode */
+  --timestamp-color: #cccccc;
+  --overlay-background-color: rgba(
+    0,
+    0,
+    0,
+    0.7
+  ); /* Increased opacity for better visibility */
+  --box-shadow-color: rgba(
+    0,
+    0,
+    0,
+    0.2
+  ); /* Increased shadow for better visibility */
+  --untitled-note-title-color: #99999966; /* Removed quotes for consistency */
+  --dark-color: #ffffff;
+  --light-color: #000000;
+}
+
 html,
 body,
 main {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
+  background: var(--note-background-color);
+}
+
+input {
+  color: var(--dark-color);
+  background: var(--note-background-color);
 }
 
 #editor {
@@ -22,6 +68,8 @@ main {
   font-size: 1.5rem;
   resize: none;
   line-height: 1.5;
+  color: var(--dark-color);
+  background: var(--note-background-color);
 }
 
 #controls {
@@ -36,13 +84,15 @@ main {
 #controls button {
   cursor: pointer;
   background: none;
-  border: 1px solid #888;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 2px 4px;
+  color: var(--dark-color);
+  background: var(--light-color);
 }
 
 #controls button:hover {
-  background-color: #f0f0f0;
+  background-color: var(--hover-background-color);
 }
 
 .notes-list {
@@ -51,14 +101,14 @@ main {
   gap: 4px;
   padding: 4px;
   border-radius: 6px;
-  border: 1px solid #888;
+  border: 1px solid var(--border-color);
   max-height: 50vh;
   overflow: auto;
 }
 
 .note-list-item {
   padding: 6px 8px;
-  background-color: #fff;
+  background-color: var(--note-background-color);
   cursor: pointer;
   border-radius: 4px;
   width: 200px;
@@ -66,10 +116,11 @@ main {
   border: 1px solid transparent;
   flex-direction: column;
   gap: 4px;
+  color: var(--dark-color);
 }
 
 .note-list-item:hover {
-  border-color: #888;
+  border-color: var(--border-color);
 }
 
 .note-list-item-top {
@@ -87,28 +138,58 @@ main {
 
 .note-list-item-delete-btn {
   cursor: pointer;
-  background-color: #ff4d4d;
+  background-color: var(
+    --delete-btn-background-color
+  ); /* Use CSS variable for consistency */
   border: none;
   border-radius: 4px;
-  color: white;
+  color: var(--dark-color);
   padding: 2px 4px;
   font-size: 0.8rem;
   margin-left: 4px; /* Ensure spacing between text and button */
 }
 
+[data-theme='dark'] .note-list-item-delete-btn {
+  opacity: 0.8;
+}
+
 .note-list-item-delete-btn:hover {
-  background-color: #ff0000;
+  background-color: var(
+    --delete-btn-hover-background-color
+  ); /* Use CSS variable for consistency */
 }
 
 .note-list-item-timestamp {
   font-size: 0.8rem;
-  color: #666;
+  color: var(--timestamp-color); /* Corrected variable name */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .empty-note {
-  color: #666;
+  color: var(--timestamp-color); /* Corrected variable name */
   font-style: italic;
+}
+
+.more-menu {
+  display: flex;
+  flex-direction: column;
+  padding: 2px;
+  gap: 4px;
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  background-color: var(--light-color);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 6px var(--box-shadow-color);
+  border-radius: 6px;
+}
+
+.more-menu button {
+  text-align: start;
+  border-radius: 2px !important;
+  border: none !important;
+  padding: 2px 4px;
 }
