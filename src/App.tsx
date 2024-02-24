@@ -415,6 +415,12 @@ function App() {
 
   const aceEditorRef = useRef<AceEditor>(null);
 
+  useEffect(() => {
+    if (isUsingVim && aceEditorRef.current) {
+      aceEditorRef.current.editor.commands.removeCommand('find');
+    }
+  }, [isUsingVim]);
+
   return (
     <main>
       {isUsingVim ? (
@@ -427,7 +433,7 @@ function App() {
           }}
         >
           <AceEditor
-            theme="clouds"
+            theme={currentTheme === 'dark' ? 'clouds_midnight' : 'clouds'}
             ref={aceEditorRef}
             value={textValue}
             onChange={(newText: string) => {
