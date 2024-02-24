@@ -131,6 +131,20 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isCmdKMenuOpen && e.key === 'Escape') {
+        e.preventDefault();
+        setIsCmdKMenuOpen(false);
+        textareaDomRef.current?.focus();
+        return;
+      }
+
+      if (!!listMenuPosition && e.key === 'Escape') {
+        e.preventDefault();
+        setListMenuPosition(null);
+        textareaDomRef.current?.focus();
+        return;
+      }
+
       if (isCmdKMenuOpen) {
         let nextIndex: number | null = null;
         if (
@@ -218,20 +232,6 @@ function App() {
         textareaDomRef.current?.blur();
         setIsCmdKMenuOpen(true);
         setCmdKSearchQuery('');
-        return;
-      }
-
-      if (isCmdKMenuOpen && e.key === 'Escape') {
-        e.preventDefault();
-        setIsCmdKMenuOpen(false);
-        textareaDomRef.current?.focus();
-        return;
-      }
-
-      if (!!listMenuPosition && e.key === 'Escape') {
-        e.preventDefault();
-        setListMenuPosition(null);
-        textareaDomRef.current?.focus();
         return;
       }
 
