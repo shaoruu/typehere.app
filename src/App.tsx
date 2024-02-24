@@ -114,6 +114,11 @@ function usePeriodicBackup<T>(data: T, interval: number = 24 * 60 * 60 * 1000) {
   }, [data, interval]);
 }
 
+const themeId = 'typehere-theme';
+if (localStorage.getItem(themeId) === '"dark"') {
+  document.documentElement.setAttribute('data-theme', 'dark');
+}
+
 function App() {
   const textareaDomRef = useRef<HTMLTextAreaElement>(null);
 
@@ -160,7 +165,7 @@ function App() {
   const listDomRef = useRef<HTMLButtonElement>(null);
 
   const [currentTheme, setCurrentTheme] = usePersistentState<'light' | 'dark'>(
-    'typehere-theme',
+    themeId,
     'light',
   );
   const [selectedListNoteIndex, setSelectedListNoteIndex] = useState<number>(0);
