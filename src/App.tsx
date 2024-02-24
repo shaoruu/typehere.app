@@ -185,7 +185,7 @@ function App() {
   const [cmdKSearchQuery, setCmdKSearchQuery] = useState('');
   const [isCmdKMenuOpen, setIsCmdKMenuOpen] = useState(false);
   const [hasVimNavigated, setHasVimNavigated] = useState(false);
-  const [isUsingVim, setIsUsingVim] = useState(true);
+  const [isUsingVim, setIsUsingVim] = usePersistentState('typehere-vim', false);
 
   const toggleTheme = () => {
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
