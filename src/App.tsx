@@ -649,7 +649,7 @@ function App() {
                 {database
                   .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
                   .map((note, index) => {
-                    const title = note.content.slice(0, 20);
+                    const title = note.content;
                     const timestamp = new Date(note.updatedAt).toLocaleString();
 
                     return (
@@ -779,7 +779,7 @@ function App() {
                 {filteredDatabase
                   .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
                   .map((note, index) => {
-                    const title = note.content.slice(0, 20);
+                    const title = note.content;
                     const timestamp = new Date(note.updatedAt).toLocaleString();
 
                     return (

@@ -166,6 +166,7 @@ input {
   align-items: center;
   justify-content: space-between;
   overflow: hidden;
+  gap: 4px;
 }
 
 .note-list-item-title {
