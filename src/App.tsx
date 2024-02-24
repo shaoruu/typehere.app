@@ -230,6 +230,11 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // NO PRINT
+      if (e.key === 'p' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+      }
+
       if (isCmdKMenuOpen && e.key === 'Escape') {
         e.preventDefault();
         setIsCmdKMenuOpen(false);
