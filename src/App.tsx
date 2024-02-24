@@ -729,7 +729,7 @@ function App() {
                 position: 'fixed',
                 top: '50%',
                 left: '50%',
-                width: '300px',
+                width: '240px',
                 transform: 'translate(-50%, -50%)',
                 backgroundColor: 'var(--note-background-color)',
                 boxShadow: '0 4px 6px var(--box-shadow-color)',
