@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { EnhancedTextarea } from './EnhancedTextarea';
 import LZString from 'lz-string';
 import Fuse from 'fuse.js';
+import AceEditor from 'react-ace';
 
 function usePersistentState<T>(storageKey: string, defaultValue?: T) {
   const [data, setData] = useState<T>(() => {
@@ -152,6 +153,17 @@ function App() {
     }
   }, [currentNoteId, database, setCurrentNoteId]);
 
+  const focus = () => {
+    if (aceEditorRef.current) {
+      const editor = aceEditorRef.current.editor;
+      if (editor.isFocused()) return;
+      editor.focus();
+      editor.gotoLine(0, 0, true);
+    } else {
+      textareaDomRef.current?.focus();
+    }
+  };
+
   const deleteNote = (noteId: string) => {
     const updatedDatabase = database.filter((note) => note.id !== noteId);
     setDatabase(updatedDatabase);
@@ -173,6 +185,7 @@ function App() {
   const [cmdKSearchQuery, setCmdKSearchQuery] = useState('');
   const [isCmdKMenuOpen, setIsCmdKMenuOpen] = useState(false);
   const [hasVimNavigated, setHasVimNavigated] = useState(false);
+  const [isUsingVim, setIsUsingVim] = useState(true);
 
   const toggleTheme = () => {
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
@@ -199,7 +212,7 @@ function App() {
       n.updatedAt = new Date().toISOString();
     }
     setTimeout(() => {
-      textareaDomRef.current?.focus();
+      focus();
     }, 10);
   };
 
@@ -220,14 +233,14 @@ function App() {
       if (isCmdKMenuOpen && e.key === 'Escape') {
         e.preventDefault();
         setIsCmdKMenuOpen(false);
-        textareaDomRef.current?.focus();
+        focus();
         return;
       }
 
       if (!!listMenuPosition && e.key === 'Escape') {
         e.preventDefault();
         setListMenuPosition(null);
-        textareaDomRef.current?.focus();
+        focus();
         return;
       }
 
@@ -345,7 +358,7 @@ function App() {
       }
 
       if (e.key === 'Enter') {
-        textareaDomRef.current?.focus();
+        focus();
       }
     };
 
@@ -365,7 +378,7 @@ function App() {
         setListMenuPosition(null);
         setHasVimNavigated(false);
 
-        textareaDomRef.current?.focus();
+        focus();
       }
     };
 
@@ -396,28 +409,80 @@ function App() {
     }
   }, [currentNoteId]);
 
+  const aceEditorRef = useRef<AceEditor>(null);
+
   return (
     <main>
-      <EnhancedTextarea
-        id="editor"
-        ref={textareaDomRef}
-        setText={(newText) => {
-          setTextValue(newText);
-          const noteIndex = database.findIndex((n) => n.id === currentNoteId);
-          if (noteIndex !== -1) {
-            const updatedNote = {
-              ...database[noteIndex],
-              content: newText,
-              updatedAt: new Date().toISOString(),
-            };
-            const newDatabase = [...database];
-            newDatabase.splice(noteIndex, 1, updatedNote);
-            setDatabase(newDatabase);
-          }
-        }}
-        text={textValue}
-        placeholder="Type here..."
-      />
+      {isUsingVim ? (
+        <div
+          style={{
+            padding: '2rem',
+            width: '100vw',
+            height: '100vh',
+          }}
+        >
+          <AceEditor
+            theme="clouds"
+            ref={aceEditorRef}
+            value={textValue}
+            onChange={(newText: string) => {
+              setTextValue(newText);
+              const noteIndex = database.findIndex(
+                (n) => n.id === currentNoteId,
+              );
+              if (noteIndex !== -1) {
+                const updatedNote = {
+                  ...database[noteIndex],
+                  content: newText,
+                  updatedAt: new Date().toISOString(),
+                };
+                const newDatabase = [...database];
+                newDatabase.splice(noteIndex, 1, updatedNote);
+                setDatabase(newDatabase);
+              }
+            }}
+            setOptions={{
+              showLineNumbers: false,
+              showGutter: false,
+              wrap: true,
+              highlightActiveLine: false,
+              showPrintMargin: false,
+              fontSize: '1.5rem',
+            }}
+            tabSize={4}
+            keyboardHandler="vim"
+            width="100%"
+            height="100%"
+            className="editor"
+            style={{
+              lineHeight: '1.5',
+              background: 'var(--note-background-color)',
+              color: 'var(--dark-color)',
+            }}
+          />
+        </div>
+      ) : (
+        <EnhancedTextarea
+          id="editor"
+          ref={textareaDomRef}
+          setText={(newText) => {
+            setTextValue(newText);
+            const noteIndex = database.findIndex((n) => n.id === currentNoteId);
+            if (noteIndex !== -1) {
+              const updatedNote = {
+                ...database[noteIndex],
+                content: newText,
+                updatedAt: new Date().toISOString(),
+              };
+              const newDatabase = [...database];
+              newDatabase.splice(noteIndex, 1, updatedNote);
+              setDatabase(newDatabase);
+            }
+          }}
+          text={textValue}
+          placeholder="Type here..."
+        />
+      )}
       <div id="controls">
         <button
           onClick={(e) => {
@@ -453,6 +518,14 @@ function App() {
               }}
               className="more-menu"
             >
+              <button
+                onClick={() => {
+                  setMoreMenuPosition(null);
+                  setIsUsingVim(!isUsingVim);
+                }}
+              >
+                {isUsingVim ? 'no vim' : 'vim'}
+              </button>
               <button
                 onClick={() => {
                   setMoreMenuPosition(null);

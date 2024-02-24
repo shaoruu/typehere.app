@@ -61,6 +61,32 @@ input {
   background: var(--note-background-color);
 }
 
+.ace_cursor {
+  /* background-color: white;
+  border: 1px solid white !important; */
+  color: black !important;
+}
+
+.normal-mode .ace_cursor {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.normal-mode .ace_hidden-cursors .ace_cursor {
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+[data-theme='dark'] .ace_cursor {
+  color: white !important;
+}
+
+[data-theme='dark'] .normal-mode .ace_cursor {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+[data-theme='dark'] .normal-mode .ace_hidden-cursors .ace_cursor {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
 #editor {
   width: 100vw;
   height: 100vh;

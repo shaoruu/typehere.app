@@ -233,6 +233,9 @@ export const EnhancedTextarea = forwardRef<
         className={className}
         spellCheck={spellCheck}
         placeholder={placeholder}
+        style={{
+          outline: 'none',
+        }}
       />
     );
   },
