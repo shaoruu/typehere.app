@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { EnhancedTextarea } from './EnhancedTextarea';
 
@@ -95,7 +95,16 @@ function App() {
   const [selectedListNoteIndex, setSelectedListNoteIndex] = useState<
     number | null
   >(null);
+  const [selectedCmdKNoteIndex, setSelectedCmdKNoteIndex] = useState<number>(0);
+  const [cmdkSearchQuery, setCmdKSearchQuery] = useState('');
   const [isCmdKMenuOpen, setIsCmdKMenuOpen] = useState(false);
+
+  const filteredDatabase = useMemo(() => {
+    return database.filter(
+      (note) =>
+        note.content.toLowerCase().includes(cmdkSearchQuery.toLowerCase()), // todo: add fuzzy search
+    );
+  }, [database, cmdkSearchQuery]);
 
   const openNote = useCallback(
     (noteId: string) => {
@@ -118,6 +127,7 @@ function App() {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setIsCmdKMenuOpen(true);
+        console.log('WTF');
         return;
       }
 
@@ -144,32 +154,71 @@ function App() {
       }
 
       if (isCmdKMenuOpen) {
+        let nextIndex: number | null = null;
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (selectedCmdKNoteIndex === null) {
+            nextIndex = filteredDatabase.length - 1;
+          } else {
+            nextIndex =
+              (selectedCmdKNoteIndex - 1 + filteredDatabase.length) %
+              filteredDatabase.length;
+          }
+          setSelectedCmdKNoteIndex(nextIndex);
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (selectedCmdKNoteIndex === null) {
+            nextIndex = 0;
+          } else {
+            nextIndex = (selectedCmdKNoteIndex + 1) % filteredDatabase.length;
+          }
+          setSelectedCmdKNoteIndex(nextIndex);
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          setIsCmdKMenuOpen(false);
+          setSelectedCmdKNoteIndex(0);
+          openNote(filteredDatabase[selectedCmdKNoteIndex!].id);
+        }
+        if (nextIndex !== null) {
+          const elementId = `note-list-cmdk-item-${nextIndex}`;
+          const element = document.getElementById(elementId);
+          if (element) {
+            element.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          }
+        }
         return;
       }
 
       if (listMenuPosition) {
+        let nextIndex: number | null = null;
         if (e.key === 'ArrowUp') {
           e.preventDefault();
           if (selectedListNoteIndex === null) {
-            setSelectedListNoteIndex(0);
+            nextIndex = 0;
           } else {
-            setSelectedListNoteIndex(
-              (selectedListNoteIndex + 1) % database.length,
-            );
+            nextIndex = (selectedListNoteIndex + 1) % database.length;
           }
+          setSelectedListNoteIndex(nextIndex);
         } else if (e.key === 'ArrowDown') {
           e.preventDefault();
           if (selectedListNoteIndex === null) {
-            setSelectedListNoteIndex(0);
+            nextIndex = database.length - 1;
           } else {
-            setSelectedListNoteIndex(
-              (selectedListNoteIndex - 1 + database.length) % database.length,
-            );
+            nextIndex =
+              (selectedListNoteIndex - 1 + database.length) % database.length;
           }
+          setSelectedListNoteIndex(nextIndex);
         } else if (e.key === 'Enter') {
           e.preventDefault();
-          setSelectedListNoteIndex(null);
+          setSelectedListNoteIndex(0);
           openNote(database[selectedListNoteIndex!].id);
+        }
+        if (nextIndex !== null) {
+          const elementId = `note-list-item-${nextIndex}`;
+          const element = document.getElementById(elementId);
+          if (element) {
+            element.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          }
         }
         return;
       }
@@ -181,9 +230,11 @@ function App() {
   }, [
     database,
     database.length,
+    filteredDatabase,
     isCmdKMenuOpen,
     listMenuPosition,
     openNote,
+    selectedCmdKNoteIndex,
     selectedListNoteIndex,
   ]);
 
@@ -281,6 +332,7 @@ function App() {
                     return (
                       <div
                         key={note.id}
+                        id={`note-list-item-${index}`}
                         className="note-list-item"
                         onClick={() => {
                           openNote(note.id);
@@ -327,6 +379,124 @@ function App() {
             document.body,
           )}
       </div>
+      {isCmdKMenuOpen &&
+        createPortal(
+          <>
+            <div
+              style={{
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+              }}
+              onClick={() => {
+                setIsCmdKMenuOpen(false);
+              }}
+            />
+            <div
+              style={{
+                zIndex: 100,
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                backgroundColor: '#fff',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                display: 'flex',
+                flexDirection: 'column',
+                borderRadius: 6,
+                border: '1px solid #888',
+              }}
+            >
+              <input
+                autoFocus
+                placeholder="Search for note"
+                value={cmdkSearchQuery}
+                onChange={(e) => setCmdKSearchQuery(e.target.value)}
+                style={{
+                  padding: '4px',
+                  outline: 'none',
+                  border: '1px solid #888',
+                  borderRadius: 4,
+                  margin: '6px',
+                  marginBottom: 0,
+                }}
+              />
+              <div
+                className="notes-list"
+                style={{
+                  maxHeight: '300px',
+                  overflow: 'auto',
+                  display: 'flex',
+                  border: 'none',
+                  flexDirection: 'column',
+                  gap: 4,
+                  padding: 4,
+                }}
+              >
+                {filteredDatabase.length === 0 && (
+                  <div style={{ opacity: 0.5, padding: '4px' }}>
+                    No notes found...
+                  </div>
+                )}
+                {filteredDatabase
+                  .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+                  .map((note, index) => {
+                    const title = note.content.slice(0, 20);
+                    const timestamp = new Date(note.updatedAt).toLocaleString();
+
+                    return (
+                      <div
+                        key={note.id}
+                        id={`note-list-cmdk-item-${index}`}
+                        className="note-list-item"
+                        onClick={() => {
+                          openNote(note.id);
+                        }}
+                        style={{
+                          backgroundColor:
+                            index === selectedCmdKNoteIndex
+                              ? 'lightgray'
+                              : 'white',
+                        }}
+                      >
+                        <div className="note-list-item-top">
+                          <div
+                            className="note-list-item-title"
+                            style={{
+                              fontWeight:
+                                note.id === currentNoteId ? 'bold' : 'normal',
+                              fontStyle: title ? 'normal' : 'italic',
+                              color: title ? 'black' : '#66666699',
+                            }}
+                          >
+                            {title || 'New Note'}
+                          </div>
+                          {database.length > 1 && (
+                            <button
+                              className="note-list-item-delete-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteNote(note.id);
+                              }}
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                        <div className="note-list-item-timestamp">
+                          {timestamp}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          </>,
+          document.body,
+        )}
     </main>
   );
 }
