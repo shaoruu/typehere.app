@@ -1,4 +1,11 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+  KeyboardEventHandler,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { EnhancedTextarea } from './EnhancedTextarea';
 import LZString from 'lz-string';
@@ -101,6 +108,7 @@ function App() {
   const [selectedCmdKNoteIndex, setSelectedCmdKNoteIndex] = useState<number>(0);
   const [cmdkSearchQuery, setCmdKSearchQuery] = useState('');
   const [isCmdKMenuOpen, setIsCmdKMenuOpen] = useState(false);
+  const [hasVimNavigated, setHasVimNavigated] = useState(false);
 
   const filteredDatabase = useMemo(() => {
     const fuse = new Fuse(database, {
@@ -145,12 +153,16 @@ function App() {
         return;
       }
 
+      const vimUp = (e.ctrlKey || e.metaKey) && e.key === 'k';
+      const vimDown = (e.ctrlKey || e.metaKey) && e.key === 'j';
+
+      if (vimUp || vimDown) {
+        setHasVimNavigated(true);
+      }
+
       if (isCmdKMenuOpen) {
         let nextIndex: number | null = null;
-        if (
-          e.key === 'ArrowUp' ||
-          ((e.ctrlKey || e.metaKey) && e.key === 'k')
-        ) {
+        if (e.key === 'ArrowUp' || vimUp) {
           e.preventDefault();
           if (selectedCmdKNoteIndex === null) {
             nextIndex = filteredDatabase.length - 1;
@@ -160,10 +172,7 @@ function App() {
               filteredDatabase.length;
           }
           setSelectedCmdKNoteIndex(nextIndex);
-        } else if (
-          e.key === 'ArrowDown' ||
-          ((e.ctrlKey || e.metaKey) && e.key === 'j')
-        ) {
+        } else if (e.key === 'ArrowDown' || vimDown) {
           e.preventDefault();
           if (selectedCmdKNoteIndex === null) {
             nextIndex = 0;
@@ -189,10 +198,7 @@ function App() {
 
       if (listMenuPosition) {
         let nextIndex: number | null = null;
-        if (
-          e.key === 'ArrowUp' ||
-          ((e.ctrlKey || e.metaKey) && e.key === 'k')
-        ) {
+        if (e.key === 'ArrowUp' || vimUp) {
           e.preventDefault();
           if (selectedListNoteIndex === null) {
             nextIndex = 0;
@@ -200,10 +206,7 @@ function App() {
             nextIndex = (selectedListNoteIndex + 1) % database.length;
           }
           setSelectedListNoteIndex(nextIndex);
-        } else if (
-          e.key === 'ArrowDown' ||
-          ((e.ctrlKey || e.metaKey) && e.key === 'j')
-        ) {
+        } else if (e.key === 'ArrowDown' || vimDown) {
           e.preventDefault();
           if (selectedListNoteIndex === null) {
             nextIndex = database.length - 1;
@@ -256,13 +259,36 @@ function App() {
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (
+        hasVimNavigated &&
+        (isCmdKMenuOpen || !!listMenuPosition) &&
+        (event.key === 'Meta' || event.key === 'Control')
+      ) {
+        if (isCmdKMenuOpen && filteredDatabase.length > 0) {
+          openNote(filteredDatabase[selectedCmdKNoteIndex!].id);
+        } else {
+          openNote(database[selectedListNoteIndex!].id);
+        }
 
-    return () => window.removeEventListener('keydown', handleKeyDown);
+        setIsCmdKMenuOpen(false);
+        setListMenuPosition(null);
+        textareaDomRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
   }, [
     database,
     database.length,
     filteredDatabase,
+    hasVimNavigated,
     isCmdKMenuOpen,
     listMenuPosition,
     openNote,
