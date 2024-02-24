@@ -414,7 +414,10 @@ function App() {
                 autoFocus
                 placeholder="Search for note"
                 value={cmdkSearchQuery}
-                onChange={(e) => setCmdKSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setCmdKSearchQuery(e.target.value);
+                  setSelectedCmdKNoteIndex(0);
+                }}
                 style={{
                   padding: '4px',
                   outline: 'none',
