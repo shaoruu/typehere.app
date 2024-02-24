@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { EnhancedTextarea } from './EnhancedTextarea';
+import Fuse from 'fuse.js';
 
 function usePersistentState<T>(storageKey: string, defaultValue?: T) {
   const [data, setData] = useState<T>(() => {
@@ -100,10 +101,14 @@ function App() {
   const [isCmdKMenuOpen, setIsCmdKMenuOpen] = useState(false);
 
   const filteredDatabase = useMemo(() => {
-    return database.filter(
-      (note) =>
-        note.content.toLowerCase().includes(cmdkSearchQuery.toLowerCase()), // todo: add fuzzy search
-    );
+    const fuse = new Fuse(database, {
+      keys: ['content'],
+      includeScore: true,
+      threshold: 0.3,
+    });
+    return cmdkSearchQuery
+      ? fuse.search(cmdkSearchQuery).map((result) => result.item)
+      : database;
   }, [database, cmdkSearchQuery]);
 
   const openNote = useCallback(
