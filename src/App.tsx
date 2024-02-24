@@ -131,41 +131,6 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setIsCmdKMenuOpen(true);
-        setCmdKSearchQuery('');
-        return;
-      }
-
-      if (isCmdKMenuOpen && e.key === 'Escape') {
-        e.preventDefault();
-        setIsCmdKMenuOpen(false);
-        textareaDomRef.current?.focus();
-        return;
-      }
-
-      if (!!listMenuPosition && e.key === 'Escape') {
-        e.preventDefault();
-        setListMenuPosition(null);
-        textareaDomRef.current?.focus();
-        return;
-      }
-
-      if (
-        (e.key === '/' || e.key === 'm') &&
-        (e.metaKey || e.ctrlKey) &&
-        listDomRef.current
-      ) {
-        const list = listDomRef.current;
-        const rect = list.getBoundingClientRect();
-        setListMenuPosition({
-          x: window.innerWidth - (rect.x + rect.width),
-          y: window.innerHeight - rect.y + 4,
-        });
-        return;
-      }
-
       if (isCmdKMenuOpen) {
         let nextIndex: number | null = null;
         if (
@@ -245,6 +210,43 @@ function App() {
             element.scrollIntoView({ block: 'center', behavior: 'smooth' });
           }
         }
+        return;
+      }
+
+      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        textareaDomRef.current?.blur();
+        setIsCmdKMenuOpen(true);
+        setCmdKSearchQuery('');
+        return;
+      }
+
+      if (isCmdKMenuOpen && e.key === 'Escape') {
+        e.preventDefault();
+        setIsCmdKMenuOpen(false);
+        textareaDomRef.current?.focus();
+        return;
+      }
+
+      if (!!listMenuPosition && e.key === 'Escape') {
+        e.preventDefault();
+        setListMenuPosition(null);
+        textareaDomRef.current?.focus();
+        return;
+      }
+
+      if (
+        (e.key === '/' || e.key === 'm') &&
+        (e.metaKey || e.ctrlKey) &&
+        listDomRef.current
+      ) {
+        const list = listDomRef.current;
+        textareaDomRef.current?.blur();
+        const rect = list.getBoundingClientRect();
+        setListMenuPosition({
+          x: window.innerWidth - (rect.x + rect.width),
+          y: window.innerHeight - rect.y + 4,
+        });
         return;
       }
 
