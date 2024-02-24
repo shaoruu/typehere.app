@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { EnhancedTextarea } from './EnhancedTextarea';
+import LZString from 'lz-string';
 import Fuse from 'fuse.js';
 
 function usePersistentState<T>(storageKey: string, defaultValue?: T) {
@@ -91,6 +92,7 @@ function App() {
     }
   };
 
+  const fileInputDomRef = useRef<HTMLInputElement>(null);
   const listDomRef = useRef<HTMLButtonElement>(null);
 
   const [selectedListNoteIndex, setSelectedListNoteIndex] = useState<
@@ -295,6 +297,47 @@ function App() {
         placeholder="Type here..."
       />
       <div id="controls">
+        <button
+          tabIndex={-1}
+          onClick={() => {
+            const compressedData = LZString.compressToEncodedURIComponent(
+              JSON.stringify(database),
+            );
+            const dataStr = 'data:text/json;charset=utf-8,' + compressedData;
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute('href', dataStr);
+            downloadAnchorNode.setAttribute('download', 'notes_export.json');
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+          }}
+        >
+          export
+        </button>
+        <input
+          type="file"
+          style={{ display: 'none' }}
+          ref={fileInputDomRef}
+          onChange={(e) => {
+            const fileReader = new FileReader();
+            const target = e.target as HTMLInputElement;
+            if (!target.files) return;
+            fileReader.readAsText(target.files[0], 'UTF-8');
+            fileReader.onload = (e) => {
+              const decompressedContent =
+                LZString.decompressFromEncodedURIComponent(
+                  e.target?.result as string,
+                );
+              if (decompressedContent) {
+                const content = JSON.parse(decompressedContent);
+                setDatabase(content);
+              }
+            };
+          }}
+        />
+        <button tabIndex={-1} onClick={() => fileInputDomRef.current?.click()}>
+          import
+        </button>
         {textValue && (
           <button
             tabIndex={-1}
