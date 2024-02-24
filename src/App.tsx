@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { EnhancedTextarea } from './EnhancedTextarea';
@@ -171,23 +172,19 @@ function App() {
       : database;
   }, [database, cmdkSearchQuery]);
 
-  const openNote = useCallback(
-    (noteId: string) => {
-      setCurrentNoteId(noteId);
-      setListMenuPosition(null);
-      const n = database.find((n) => n.id === noteId);
-      if (n) {
-        n.updatedAt = new Date().toISOString();
-      }
-      setDatabase([...database]);
-      setTimeout(() => {
-        textareaDomRef.current?.focus();
-      }, 10);
-    },
-    [database, setCurrentNoteId, setDatabase],
-  );
+  const openNote = (noteId: string) => {
+    setCurrentNoteId(noteId);
+    setListMenuPosition(null);
+    const n = database.find((n) => n.id === noteId);
+    if (n) {
+      n.updatedAt = new Date().toISOString();
+    }
+    setTimeout(() => {
+      textareaDomRef.current?.focus();
+    }, 10);
+  };
 
-  const openNextNote = useCallback(() => {
+  const openNewNote = () => {
     const newNote: Note = {
       id: getRandomId(),
       content: '',
@@ -197,7 +194,7 @@ function App() {
     setCurrentNoteId(newNote.id);
     setTextValue('');
     openNote(newNote.id);
-  }, [database, openNote, setCurrentNoteId, setDatabase]);
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -318,17 +315,17 @@ function App() {
       }
 
       if (
-        e.key === 'h' &&
+        e.key === 'Enter' &&
         (e.metaKey || e.ctrlKey) &&
-        textValue.trim().length > 0
+        e.shiftKey &&
+        textValue.trim().length !== 0
       ) {
         e.preventDefault();
-        openNextNote();
+        openNewNote();
         return;
       }
 
       if (e.key === 'Enter') {
-        console.log(textareaDomRef.current);
         textareaDomRef.current?.focus();
       }
     };
@@ -367,7 +364,7 @@ function App() {
     hasVimNavigated,
     isCmdKMenuOpen,
     listMenuPosition,
-    openNextNote,
+    openNewNote,
     openNote,
     selectedCmdKNoteIndex,
     selectedListNoteIndex,
@@ -445,7 +442,7 @@ function App() {
           import
         </button>
         {textValue && (
-          <button tabIndex={-1} onClick={openNextNote}>
+          <button tabIndex={-1} onClick={openNewNote}>
             new
           </button>
         )}
