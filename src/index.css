@@ -113,7 +113,7 @@ input {
   background-color: var(--note-background-color);
   cursor: pointer;
   border-radius: 4px;
-  width: 200px;
+  width: 100%;
   display: flex;
   border: 1px solid transparent;
   flex-direction: column;

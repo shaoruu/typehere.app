@@ -551,6 +551,7 @@ function App() {
                   right: listMenuPosition.x,
                   bottom: listMenuPosition.y,
                   zIndex: 100,
+                  width: '200px',
                   backgroundColor: 'var(--note-background-color)',
                   boxShadow: '0 4px 6px var(--box-shadow-color)',
                 }}
@@ -636,6 +637,7 @@ function App() {
                 position: 'fixed',
                 top: '50%',
                 left: '50%',
+                width: '300px',
                 transform: 'translate(-50%, -50%)',
                 backgroundColor: 'var(--note-background-color)',
                 boxShadow: '0 4px 6px var(--box-shadow-color)',
