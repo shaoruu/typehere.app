@@ -359,6 +359,8 @@ function App() {
 
       if (e.key === 'Enter') {
         focus();
+      } else if (isUsingVim && !isCmdKMenuOpen && !listMenuPosition) {
+        aceEditorRef.current?.editor.focus();
       }
     };
 
