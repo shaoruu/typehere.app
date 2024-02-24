@@ -218,7 +218,7 @@ function App() {
       const vimUp = (e.ctrlKey || e.metaKey) && e.key === 'k';
       const vimDown = (e.ctrlKey || e.metaKey) && e.key === 'j';
 
-      if (vimUp || vimDown) {
+      if ((isCmdKMenuOpen || !!listMenuPosition) && (vimUp || vimDown)) {
         setHasVimNavigated(true);
       }
 
@@ -347,6 +347,8 @@ function App() {
 
         setIsCmdKMenuOpen(false);
         setListMenuPosition(null);
+        setHasVimNavigated(false);
+
         textareaDomRef.current?.focus();
       }
     };
