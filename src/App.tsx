@@ -321,7 +321,7 @@ function App() {
         return;
       }
 
-      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+      if ((e.key === 'p' || e.key === 'k') && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         textareaDomRef.current?.blur();
         setSelectedCmdKNoteIndex(0);
