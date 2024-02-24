@@ -150,7 +150,11 @@ function App() {
         return;
       }
 
-      if (e.key === '/' && (e.metaKey || e.ctrlKey) && listDomRef.current) {
+      if (
+        (e.key === '/' || e.key === 'm') &&
+        (e.metaKey || e.ctrlKey) &&
+        listDomRef.current
+      ) {
         const list = listDomRef.current;
         const rect = list.getBoundingClientRect();
         setListMenuPosition({
@@ -162,7 +166,10 @@ function App() {
 
       if (isCmdKMenuOpen) {
         let nextIndex: number | null = null;
-        if (e.key === 'ArrowUp') {
+        if (
+          e.key === 'ArrowUp' ||
+          ((e.ctrlKey || e.metaKey) && e.key === 'k')
+        ) {
           e.preventDefault();
           if (selectedCmdKNoteIndex === null) {
             nextIndex = filteredDatabase.length - 1;
@@ -172,7 +179,10 @@ function App() {
               filteredDatabase.length;
           }
           setSelectedCmdKNoteIndex(nextIndex);
-        } else if (e.key === 'ArrowDown') {
+        } else if (
+          e.key === 'ArrowDown' ||
+          ((e.ctrlKey || e.metaKey) && e.key === 'j')
+        ) {
           e.preventDefault();
           if (selectedCmdKNoteIndex === null) {
             nextIndex = 0;
@@ -198,7 +208,10 @@ function App() {
 
       if (listMenuPosition) {
         let nextIndex: number | null = null;
-        if (e.key === 'ArrowUp') {
+        if (
+          e.key === 'ArrowUp' ||
+          ((e.ctrlKey || e.metaKey) && e.key === 'k')
+        ) {
           e.preventDefault();
           if (selectedListNoteIndex === null) {
             nextIndex = 0;
@@ -206,7 +219,10 @@ function App() {
             nextIndex = (selectedListNoteIndex + 1) % database.length;
           }
           setSelectedListNoteIndex(nextIndex);
-        } else if (e.key === 'ArrowDown') {
+        } else if (
+          e.key === 'ArrowDown' ||
+          ((e.ctrlKey || e.metaKey) && e.key === 'j')
+        ) {
           e.preventDefault();
           if (selectedListNoteIndex === null) {
             nextIndex = database.length - 1;
