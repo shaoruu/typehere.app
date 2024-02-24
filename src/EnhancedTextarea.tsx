@@ -1,10 +1,5 @@
-import {
-  forwardRef,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from 'react';
+import composeRefs from '@seznam/compose-react-refs';
+import { forwardRef, useEffect, useRef, useState } from 'react';
 
 type EnhancedTextareaProps = {
   id: string;
@@ -21,7 +16,7 @@ export type EnhancedTextareaRefs = {
 };
 
 export const EnhancedTextarea = forwardRef<
-  EnhancedTextareaRefs,
+  HTMLTextAreaElement,
   EnhancedTextareaProps
 >(
   (
@@ -40,10 +35,6 @@ export const EnhancedTextarea = forwardRef<
     const [stateSelectionEnd, setStateSelectionEnd] = useState(0);
 
     const txtInput = useRef<HTMLTextAreaElement>(null);
-
-    useImperativeHandle(ref, () => ({
-      getCodeContent: () => text,
-    }));
 
     useEffect(() => {
       const textArea = txtInput.current;
@@ -235,7 +226,7 @@ export const EnhancedTextarea = forwardRef<
     return (
       <textarea
         id={id}
-        ref={txtInput}
+        ref={composeRefs(txtInput, ref)}
         value={text}
         onKeyDown={handleKeyDown}
         onChange={handleCodeChange}

@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@seznam/compose-react-refs": "^1.0.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

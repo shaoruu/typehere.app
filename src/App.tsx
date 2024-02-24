@@ -127,19 +127,21 @@ function App() {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setIsCmdKMenuOpen(true);
-        console.log('WTF');
+        setCmdKSearchQuery('');
         return;
       }
 
       if (isCmdKMenuOpen && e.key === 'Escape') {
         e.preventDefault();
         setIsCmdKMenuOpen(false);
+        textareaDomRef.current?.focus();
         return;
       }
 
       if (!!listMenuPosition && e.key === 'Escape') {
         e.preventDefault();
         setListMenuPosition(null);
+        textareaDomRef.current?.focus();
         return;
       }
 
@@ -222,6 +224,11 @@ function App() {
         }
         return;
       }
+
+      if (e.key === 'Enter') {
+        console.log(textareaDomRef.current);
+        textareaDomRef.current?.focus();
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -248,6 +255,7 @@ function App() {
     <main>
       <EnhancedTextarea
         id="editor"
+        ref={textareaDomRef}
         setText={(newText) => {
           setTextValue(newText);
           const noteIndex = database.findIndex((n) => n.id === currentNoteId);
