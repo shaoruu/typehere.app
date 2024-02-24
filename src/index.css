@@ -15,6 +15,15 @@
   scrollbar-width: none; /* Firefox */
 }
 
+*::--webkit-scrollbar {
+  display: none;
+}
+
+* {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
 :root {
   --border-color: #888888;
   --hover-background-color: #f0f0f0;
