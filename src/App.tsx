@@ -360,7 +360,9 @@ function App() {
       if (e.key === 'Enter') {
         focus();
       } else if (isUsingVim && !isCmdKMenuOpen && !listMenuPosition) {
-        aceEditorRef.current?.editor.focus();
+        if (document.activeElement === document.body) {
+          aceEditorRef.current?.editor.focus();
+        }
       }
     };
 
