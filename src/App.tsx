@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { EnhancedTextarea } from './EnhancedTextarea';
 
@@ -90,6 +90,103 @@ function App() {
     }
   };
 
+  const listDomRef = useRef<HTMLButtonElement>(null);
+
+  const [selectedListNoteIndex, setSelectedListNoteIndex] = useState<
+    number | null
+  >(null);
+  const [isCmdKMenuOpen, setIsCmdKMenuOpen] = useState(false);
+
+  const openNote = useCallback(
+    (noteId: string) => {
+      setCurrentNoteId(noteId);
+      setListMenuPosition(null);
+      const n = database.find((n) => n.id === noteId);
+      if (n) {
+        n.updatedAt = new Date().toISOString();
+      }
+      setDatabase([...database]);
+      setTimeout(() => {
+        textareaDomRef.current?.focus();
+      }, 10);
+    },
+    [database, setCurrentNoteId, setDatabase],
+  );
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setIsCmdKMenuOpen(true);
+        return;
+      }
+
+      if (isCmdKMenuOpen && e.key === 'Escape') {
+        e.preventDefault();
+        setIsCmdKMenuOpen(false);
+        return;
+      }
+
+      if (!!listMenuPosition && e.key === 'Escape') {
+        e.preventDefault();
+        setListMenuPosition(null);
+        return;
+      }
+
+      if (e.key === '/' && (e.metaKey || e.ctrlKey) && listDomRef.current) {
+        const list = listDomRef.current;
+        const rect = list.getBoundingClientRect();
+        setListMenuPosition({
+          x: window.innerWidth - (rect.x + rect.width),
+          y: window.innerHeight - rect.y + 4,
+        });
+        return;
+      }
+
+      if (isCmdKMenuOpen) {
+        return;
+      }
+
+      if (listMenuPosition) {
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (selectedListNoteIndex === null) {
+            setSelectedListNoteIndex(0);
+          } else {
+            setSelectedListNoteIndex(
+              (selectedListNoteIndex + 1) % database.length,
+            );
+          }
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (selectedListNoteIndex === null) {
+            setSelectedListNoteIndex(0);
+          } else {
+            setSelectedListNoteIndex(
+              (selectedListNoteIndex - 1 + database.length) % database.length,
+            );
+          }
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          setSelectedListNoteIndex(null);
+          openNote(database[selectedListNoteIndex!].id);
+        }
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    database,
+    database.length,
+    isCmdKMenuOpen,
+    listMenuPosition,
+    openNote,
+    selectedListNoteIndex,
+  ]);
+
   useEffect(() => {
     if (textareaDomRef.current) {
       textareaDomRef.current.focus();
@@ -130,12 +227,14 @@ function App() {
               setDatabase([...database, newNote]);
               setCurrentNoteId(newNote.id);
               setTextValue('');
+              openNote(newNote.id);
             }}
           >
             new
           </button>
         )}
         <button
+          ref={listDomRef}
           tabIndex={-1}
           onClick={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
@@ -175,7 +274,7 @@ function App() {
               >
                 {database
                   .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-                  .map((note) => {
+                  .map((note, index) => {
                     const title = note.content.slice(0, 20);
                     const timestamp = new Date(note.updatedAt).toLocaleString();
 
@@ -184,16 +283,13 @@ function App() {
                         key={note.id}
                         className="note-list-item"
                         onClick={() => {
-                          setCurrentNoteId(note.id);
-                          setListMenuPosition(null);
-                          const n = database.find((n) => n.id === note.id);
-                          if (n) {
-                            n.updatedAt = new Date().toISOString();
-                          }
-                          setDatabase([...database]);
-                          setTimeout(() => {
-                            textareaDomRef.current?.focus();
-                          }, 10);
+                          openNote(note.id);
+                        }}
+                        style={{
+                          backgroundColor:
+                            index === selectedListNoteIndex
+                              ? 'lightgray'
+                              : 'white',
                         }}
                       >
                         <div className="note-list-item-top">
