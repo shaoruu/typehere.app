@@ -727,7 +727,7 @@ function App() {
               style={{
                 zIndex: 100,
                 position: 'fixed',
-                top: '50%',
+                top: '30%',
                 left: '50%',
                 width: '240px',
                 transform: 'translate(-50%, -50%)',
