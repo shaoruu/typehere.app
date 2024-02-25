@@ -213,6 +213,11 @@ function App() {
     }
     setTimeout(() => {
       focus();
+
+      if (aceEditorRef.current) {
+        const editor = aceEditorRef.current.editor;
+        editor.getSession().getUndoManager().reset();
+      }
     }, 10);
   };
 
@@ -649,9 +654,12 @@ function App() {
                 {database
                   .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
                   .map((note, index) => {
+                    const firstLineBreakIndex = note.content.indexOf('\n');
                     const title = note.content.substring(
                       0,
-                      note.content.indexOf('\n'),
+                      firstLineBreakIndex === -1
+                        ? undefined
+                        : firstLineBreakIndex,
                     );
                     const timestamp = new Date(note.updatedAt).toLocaleString();
 
@@ -782,9 +790,12 @@ function App() {
                 {filteredDatabase
                   .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
                   .map((note, index) => {
+                    const firstLineBreakIndex = note.content.indexOf('\n');
                     const title = note.content.substring(
                       0,
-                      note.content.indexOf('\n'),
+                      firstLineBreakIndex === -1
+                        ? undefined
+                        : firstLineBreakIndex,
                     );
                     const timestamp = new Date(note.updatedAt).toLocaleString();
 
