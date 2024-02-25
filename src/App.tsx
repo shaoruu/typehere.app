@@ -727,10 +727,10 @@ function App() {
               style={{
                 zIndex: 100,
                 position: 'fixed',
-                top: '30%',
+                top: '25%',
                 left: '50%',
                 width: '240px',
-                transform: 'translate(-50%, -50%)',
+                transform: 'translateX(-50%)',
                 backgroundColor: 'var(--note-background-color)',
                 boxShadow: '0 4px 6px var(--box-shadow-color)',
                 display: 'flex',
