@@ -142,6 +142,10 @@ function App() {
     y: number;
   } | null>(null);
   const [textValue, setTextValue] = useState('');
+  const [lastAceCursorPosition, setLastAceCursorPosition] = useState({
+    row: 0,
+    column: 0,
+  });
 
   useEffect(() => {
     const currentNote = database.find((note) => note.id === currentNoteId);
@@ -157,8 +161,11 @@ function App() {
     if (aceEditorRef.current) {
       const editor = aceEditorRef.current.editor;
       if (editor.isFocused()) return;
+      editor.moveCursorTo(
+        lastAceCursorPosition.row,
+        lastAceCursorPosition.column,
+      );
       editor.focus();
-      editor.gotoLine(0, 0, true);
     } else {
       textareaDomRef.current?.focus();
     }
@@ -209,6 +216,7 @@ function App() {
       return;
     }
 
+    setLastAceCursorPosition({ row: 0, column: 0 });
     setCurrentNoteId(noteId);
     setListMenuPosition(null);
 
@@ -480,6 +488,12 @@ function App() {
               highlightActiveLine: false,
               showPrintMargin: false,
               fontSize: '1.5rem',
+            }}
+            onCursorChange={(e) => {
+              setLastAceCursorPosition({
+                row: e.cursor.row,
+                column: e.cursor.column,
+              });
             }}
             tabSize={4}
             keyboardHandler="vim"
