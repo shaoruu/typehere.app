@@ -205,7 +205,7 @@ function App() {
   }, [database, cmdKSearchQuery]);
 
   const openNote = (noteId: string) => {
-    if (!noteId || database.find((n) => n.id === noteId)) {
+    if (!noteId || !database.find((n) => n.id === noteId)) {
       return;
     }
 
