@@ -205,12 +205,18 @@ function App() {
   }, [database, cmdKSearchQuery]);
 
   const openNote = (noteId: string) => {
+    if (!noteId || database.find((n) => n.id === noteId)) {
+      return;
+    }
+
     setCurrentNoteId(noteId);
     setListMenuPosition(null);
+
     const n = database.find((n) => n.id === noteId);
     if (n) {
       n.updatedAt = new Date().toISOString();
     }
+
     setTimeout(() => {
       focus();
 
@@ -221,10 +227,10 @@ function App() {
     }, 10);
   };
 
-  const openNewNote = () => {
+  const openNewNote = (defaultContent: string = '') => {
     const newNote: Note = {
       id: getRandomId(),
-      content: '',
+      content: defaultContent,
       updatedAt: new Date().toISOString(),
     };
     setDatabase([...database, newNote]);
@@ -283,9 +289,14 @@ function App() {
           setSelectedCmdKNoteIndex(nextIndex);
         } else if (e.key === 'Enter') {
           e.preventDefault();
+          const noteIdToOpen = filteredDatabase[selectedCmdKNoteIndex]?.id;
+          if (noteIdToOpen) {
+            openNote(filteredDatabase[selectedCmdKNoteIndex!].id);
+          } else {
+            openNewNote(cmdKSearchQuery);
+          }
           setIsCmdKMenuOpen(false);
           setSelectedCmdKNoteIndex(0);
-          openNote(filteredDatabase[selectedCmdKNoteIndex!].id);
         }
         if (nextIndex !== null) {
           const elementId = `note-list-cmdk-item-${nextIndex}`;
@@ -607,7 +618,7 @@ function App() {
           </>
         )}
         {textValue && (
-          <button tabIndex={-1} onClick={openNewNote}>
+          <button tabIndex={-1} onClick={() => openNewNote('')}>
             new
           </button>
         )}
@@ -778,14 +789,72 @@ function App() {
               >
                 {filteredDatabase.length === 0 && (
                   <div
+                    id={`note-list-cmdk-item-${0}`}
+                    className="note-list-item"
+                    onClick={() => {
+                      openNewNote(cmdKSearchQuery);
+                      setIsCmdKMenuOpen(false);
+                      setSelectedCmdKNoteIndex(0);
+                    }}
                     style={{
-                      opacity: 0.5,
-                      padding: '4px',
-                      color: 'var(--dark-color)',
+                      backgroundColor: 'var(--note-selected-background-color)',
                     }}
                   >
-                    No notes found...
+                    <div className="note-list-item-top">
+                      <div
+                        className="note-list-item-title"
+                        style={{
+                          fontWeight: 'normal',
+                          fontStyle: 'normal',
+                          color: 'var(--dark-color)',
+                        }}
+                      >
+                        {cmdKSearchQuery}
+                      </div>
+                      <p
+                        style={{
+                          marginLeft: '4px',
+                          fontSize: '0.8rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '2px 4px',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          color: 'var(--on-fill-color)',
+                          background: 'var(--keyboard-key-color)',
+                        }}
+                      >
+                        Enter{' '}
+                        <span
+                          style={{
+                            marginLeft: '4px',
+                            marginBottom: '1px',
+                          }}
+                        >
+                          ↵
+                        </span>
+                      </p>
+                    </div>
+                    <div
+                      className="note-list-item-timestamp"
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <p>create new note</p>
+                    </div>
                   </div>
+                  // <div
+                  //   style={{
+                  //     opacity: 0.5,
+                  //     padding: '4px',
+                  //     color: 'var(--dark-color)',
+                  //   }}
+                  // >
+                  //   No notes found...
+                  // </div>
                 )}
                 {filteredDatabase
                   .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
