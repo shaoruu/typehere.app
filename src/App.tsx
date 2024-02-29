@@ -5,6 +5,16 @@ import { EnhancedTextarea } from './EnhancedTextarea';
 import LZString from 'lz-string';
 import Fuse from 'fuse.js';
 import AceEditor from 'react-ace';
+import CryptoJS from 'crypto-js';
+
+export const encryptText = (text: string, password: string): string => {
+  return CryptoJS.AES.encrypt(text, password).toString();
+};
+
+export const decryptText = (cipherText: string, password: string): string => {
+  const bytes = CryptoJS.AES.decrypt(cipherText, password);
+  return bytes.toString(CryptoJS.enc.Utf8);
+};
 
 function usePersistentState<T>(storageKey: string, defaultValue?: T) {
   const [data, setData] = useState<T>(() => {
@@ -248,6 +258,20 @@ function App() {
     openNote(newNote.id);
   };
 
+  const saveNote = (noteId: string, newText: string) => {
+    const noteIndex = database.findIndex((n) => n.id === noteId);
+    if (noteIndex !== -1) {
+      const updatedNote = {
+        ...database[noteIndex],
+        content: newText,
+        updatedAt: new Date().toISOString(),
+      };
+      const newDatabase = [...database];
+      newDatabase.splice(noteIndex, 1, updatedNote);
+      setDatabase(newDatabase);
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // NO PRINT
@@ -468,19 +492,7 @@ function App() {
             value={textValue}
             onChange={(newText: string) => {
               setTextValue(newText);
-              const noteIndex = database.findIndex(
-                (n) => n.id === currentNoteId,
-              );
-              if (noteIndex !== -1) {
-                const updatedNote = {
-                  ...database[noteIndex],
-                  content: newText,
-                  updatedAt: new Date().toISOString(),
-                };
-                const newDatabase = [...database];
-                newDatabase.splice(noteIndex, 1, updatedNote);
-                setDatabase(newDatabase);
-              }
+              saveNote(currentNoteId, newText);
             }}
             setOptions={{
               showLineNumbers: false,
@@ -514,17 +526,7 @@ function App() {
           ref={textareaDomRef}
           setText={(newText) => {
             setTextValue(newText);
-            const noteIndex = database.findIndex((n) => n.id === currentNoteId);
-            if (noteIndex !== -1) {
-              const updatedNote = {
-                ...database[noteIndex],
-                content: newText,
-                updatedAt: new Date().toISOString(),
-              };
-              const newDatabase = [...database];
-              newDatabase.splice(noteIndex, 1, updatedNote);
-              setDatabase(newDatabase);
-            }
+            saveNote(currentNoteId, newText);
           }}
           text={textValue}
           placeholder="Type here..."
