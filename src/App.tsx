@@ -127,6 +127,7 @@ function App() {
     'typehere-database',
     freshDatabase,
   );
+
   usePeriodicBackup(database);
 
   const [currentNoteId, setCurrentNoteId] = usePersistentState<string>(
@@ -579,6 +580,13 @@ function App() {
                 }}
               >
                 {currentTheme === 'light' ? 'dark' : 'light'}
+              </button>
+              <button
+                onClick={() => {
+                  backupDataToSafeLocation(database);
+                }}
+              >
+                backup
               </button>
               <button
                 tabIndex={-1}
