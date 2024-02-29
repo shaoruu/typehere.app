@@ -152,6 +152,7 @@ function App() {
     x: number;
     y: number;
   } | null>(null);
+  const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
   const [textValue, setTextValue] = useState('');
   const [lastAceCursorPosition, setLastAceCursorPosition] = useState({
     row: 0,
@@ -375,11 +376,18 @@ function App() {
         return;
       }
 
+      if (isHelpMenuOpen && (e.key === 'Escape' || e.key === 'Enter')) {
+        e.preventDefault();
+        setIsHelpMenuOpen(false);
+        focus();
+      }
+
       if ((e.key === 'p' || e.key === 'k') && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         textareaDomRef.current?.blur();
         setSelectedCmdKNoteIndex(0);
         setIsCmdKMenuOpen(true);
+        setIsHelpMenuOpen(false);
         setCmdKSearchQuery('');
         return;
       }
@@ -393,6 +401,7 @@ function App() {
         textareaDomRef.current?.blur();
         setSelectedListNoteIndex(0);
         const rect = list.getBoundingClientRect();
+        setIsHelpMenuOpen(false);
         setListMenuPosition({
           x: window.innerWidth - (rect.x + rect.width),
           y: window.innerHeight - rect.y + 4,
@@ -475,6 +484,9 @@ function App() {
     }
   }, [isUsingVim]);
 
+  const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+  const cmdKey = isMac ? '⌘' : 'ctrl';
+
   return (
     <main>
       {isUsingVim ? (
@@ -533,6 +545,72 @@ function App() {
         />
       )}
       <div id="controls">
+        <button
+          onClick={() => {
+            setIsHelpMenuOpen(true);
+          }}
+        >
+          ?
+        </button>
+        {isHelpMenuOpen &&
+          createPortal(
+            <>
+              <div
+                style={{
+                  width: '100vw',
+                  height: '100vh',
+                  position: 'fixed',
+                  background: 'var(--overlay-background-color)',
+                  top: 0,
+                  left: 0,
+                  zIndex: 10,
+                }}
+                onClick={() => {
+                  setIsHelpMenuOpen(false);
+                }}
+              />
+              <div className="help-menu">
+                <h3>Keyboard Shortcuts</h3>
+                <div className="help-menu-shortcuts">
+                  <div className="help-menu-shortcuts-item">
+                    <div className="help-menu-shortcuts-keys">
+                      <kbd>{cmdKey}</kbd>
+                      <kbd>k/p</kbd>
+                    </div>
+                    <span>Open notes search</span>
+                  </div>
+                  <div className="help-menu-shortcuts-item">
+                    <div className="help-menu-shortcuts-keys">
+                      <kbd>{cmdKey}</kbd>
+                      <kbd>m/slash</kbd>
+                    </div>
+                    <span>Open notes list</span>
+                  </div>
+                  <div className="help-menu-shortcuts-item">
+                    <div className="help-menu-shortcuts-keys">
+                      <kbd>{cmdKey}</kbd>
+                      <kbd>⇧</kbd>
+                      <kbd>⏎</kbd>
+                    </div>
+                    <span>Create empty note</span>
+                  </div>
+                  <div className="help-menu-shortcuts-item">
+                    <div className="help-menu-shortcuts-keys">
+                      <kbd>{cmdKey}</kbd>
+                      <kbd>j/k</kbd>
+                    </div>
+                    or
+                    <div className="help-menu-shortcuts-keys">
+                      <kbd>↑/↓</kbd>
+                    </div>
+                    <span>Navigation</span>
+                  </div>
+                </div>
+                <button onClick={() => setIsHelpMenuOpen(false)}>close</button>
+              </div>
+            </>,
+            document.body,
+          )}
         <button
           onClick={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();

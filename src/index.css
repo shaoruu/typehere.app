@@ -243,3 +243,53 @@ input {
   border: none !important;
   padding: 2px 4px;
 }
+
+.help-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  max-height: 50vh;
+  overflow: auto;
+  position: fixed;
+  z-index: 11;
+  top: 50%;
+  left: 50%;
+  background: var(--note-background-color);
+  transform: translate(-50%, -50%);
+  color: var(--dark-color);
+}
+
+.help-menu-shortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.help-menu-shortcuts-item {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.help-menu-shortcuts-keys {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.help-menu-shortcuts-keys kbd {
+  background-color: var(--keyboard-key-color);
+  color: var(--on-fill-color);
+  padding: 2px 4px;
+  border-radius: 4px;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
+  font-size: 0.85rem;
+  font-weight: bold;
+}
+
+* button {
+  cursor: pointer;
+}
