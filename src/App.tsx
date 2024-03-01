@@ -480,7 +480,9 @@ function App() {
 
   useEffect(() => {
     if (isUsingVim && aceEditorRef.current) {
-      aceEditorRef.current.editor.commands.removeCommand('find');
+      const editor = aceEditorRef.current.editor;
+      editor.commands.removeCommand('find');
+      editor.getSession().setOption('indentedSoftWrap', false);
     }
   }, [isUsingVim]);
 
