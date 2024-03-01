@@ -512,8 +512,8 @@ function App() {
               wrap: true,
               highlightActiveLine: false,
               showPrintMargin: false,
-              fontSize: '1.5rem',
             }}
+            fontSize="1.5rem"
             onCursorChange={(e) => {
               setLastAceCursorPosition({
                 row: e.cursor.row,
