@@ -502,7 +502,16 @@ function App() {
   const cmdKey = isMac ? '⌘' : 'ctrl';
 
   return (
-    <main>
+    <main
+      style={{
+        ...(isNarrowScreen
+          ? {
+              maxWidth: '800px',
+              margin: '0 auto',
+            }
+          : {}),
+      }}
+    >
       {isUsingVim ? (
         <div
           style={{
@@ -510,12 +519,6 @@ function App() {
             paddingRight: '0',
             width: '100vw',
             height: '100vh',
-            ...(isNarrowScreen
-              ? {
-                  maxWidth: '800px',
-                  margin: '0 auto',
-                }
-              : {}),
           }}
         >
           <AceEditor
