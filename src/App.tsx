@@ -495,6 +495,7 @@ function App() {
       const editor = aceEditorRef.current.editor;
       editor.commands.removeCommand('find');
       editor.getSession().setOption('indentedSoftWrap', false);
+      editor.resize();
     }
   }, [isUsingVim]);
 
@@ -516,8 +517,8 @@ function App() {
         <div
           style={{
             padding: '2rem',
+            width: '100%',
             paddingRight: '0',
-            width: '100vw',
             height: '100vh',
           }}
         >
