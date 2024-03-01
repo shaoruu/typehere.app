@@ -1,30 +1,32 @@
-# React + TypeScript + Vite
+# TypeHere: A Powerful Textarea
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+<img width="2560" alt="image" src="https://github.com/shaoruu/typehere.app/assets/35216312/4fdcbb50-6d84-48f4-88d8-07e5f3547a92">
 
-Currently, two official plugins are available:
+## Inspirations
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+I used to use typehere.co a lot until the site was taken down, so I created [typehere.app](https://typehere.app). For a long while, it was also just a textarea that saved its contents to `localStorage`, but recently I've decided to add more features that I would find useful myself.
 
-## Expanding the ESLint configuration
+## Features
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+- Toggleable vim
+- Multiple notes
+- A bunch of keyboard shortcuts 
+- Fast navigation with cmd+K menu
+- Light/dark theme
+- Everything client-side, all in `localStorage`
+- Periodically backed up to `indexDB` (also on ur laptop)
 
-- Configure the top-level `parserOptions` property like this:
+## Keyboard Shortcuts
 
-```js
-export default {
-  // other rules...
-  parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
-  },
-}
-```
+<i>For the most up-to-date keyboard shortcuts, press <b>?</b> on bottom right</i>
 
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
+- <kbd>⌘/⌃</kbd> + <kbd>k/p</kbd>: Open notes search
+- <kbd>⌘/⌃</kbd> + <kbd>m/slash</kbd>: Open notes list 
+- <kbd>⌘/⌃</kbd> + <kbd>⇧</kbd> + <kbd>↵</kbd>: Create new note
+- <kbd>⌘/⌃</kbd> + <kbd>i</kbd>: Toggle narrow screen
+- <kbd>⌘/⌃</kbd> + <kbd>j/k</kbd> or <kbd>↑↓</kbd>: Navigate in lists
+
+## Things to Add
+
+- Passport protected notes
+- Quick workspaces to switch context
