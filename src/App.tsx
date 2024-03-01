@@ -205,6 +205,10 @@ function App() {
   const [isCmdKMenuOpen, setIsCmdKMenuOpen] = useState(false);
   const [hasVimNavigated, setHasVimNavigated] = useState(false);
   const [isUsingVim, setIsUsingVim] = usePersistentState('typehere-vim', false);
+  const [isNarrowScreen, setIsNarrowScreen] = usePersistentState(
+    'typehere-narrow',
+    false,
+  );
 
   const toggleTheme = () => {
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
@@ -376,10 +380,17 @@ function App() {
         return;
       }
 
+      if (e.key === 'i' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        setIsNarrowScreen(!isNarrowScreen);
+        return;
+      }
+
       if (isHelpMenuOpen && (e.key === 'Escape' || e.key === 'Enter')) {
         e.preventDefault();
-        setIsHelpMenuOpen(false);
+        setIsHelpMenuOpen((prev) => !prev);
         focus();
+        return;
       }
 
       if ((e.key === 'p' || e.key === 'k') && (e.metaKey || e.ctrlKey)) {
@@ -468,6 +479,7 @@ function App() {
     selectedCmdKNoteIndex,
     selectedListNoteIndex,
     textValue,
+    isNarrowScreen,
   ]);
 
   useEffect(() => {
@@ -498,6 +510,12 @@ function App() {
             paddingRight: '0',
             width: '100vw',
             height: '100vh',
+            ...(isNarrowScreen
+              ? {
+                  maxWidth: '800px',
+                  margin: '0 auto',
+                }
+              : {}),
           }}
         >
           <AceEditor
@@ -606,6 +624,13 @@ function App() {
                       <kbd>↑/↓</kbd>
                     </div>
                     <span>Navigation</span>
+                  </div>
+                  <div className="help-menu-shortcuts-item">
+                    <div className="help-menu-shortcuts-keys">
+                      <kbd>{cmdKey}</kbd>
+                      <kbd>i</kbd>
+                    </div>
+                    <span>Toggle narrow screen</span>
                   </div>
                 </div>
                 <button onClick={() => setIsHelpMenuOpen(false)}>close</button>
