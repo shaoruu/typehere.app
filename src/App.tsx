@@ -554,6 +554,7 @@ function App() {
               background: 'var(--note-background-color)',
               color: 'var(--dark-color)',
             }}
+            placeholder="Type here..."
           />
         </div>
       ) : (
