@@ -212,9 +212,21 @@ function App() {
 
   const toggleTheme = () => {
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-    setCurrentTheme(newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
+    saveTheme(newTheme);
   };
+
+  const saveTheme = (theme: 'light' | 'dark') => {
+    setCurrentTheme(theme);
+    document.documentElement.setAttribute('data-theme', theme);
+  };
+
+  useEffect(() => {
+    if (currentTheme === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  }, [currentTheme]);
 
   const filteredDatabase = useMemo(() => {
     const fuse = new Fuse(database, {
@@ -247,6 +259,7 @@ function App() {
       if (aceEditorRef.current) {
         const editor = aceEditorRef.current.editor;
         editor.getSession().getUndoManager().reset();
+        editor.clearSelection();
       }
     }, 10);
   };
