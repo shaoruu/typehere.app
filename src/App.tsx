@@ -276,6 +276,15 @@ function App() {
     openNote(newNote.id);
   };
 
+  const getNoteTitle = (note: Note) => {
+    const firstLineBreakIndex = note.content.trim().indexOf('\n');
+    const title = note.content.substring(
+      0,
+      firstLineBreakIndex === -1 ? undefined : firstLineBreakIndex + 1,
+    );
+    return title;
+  };
+
   const saveNote = (noteId: string, newText: string) => {
     const noteIndex = database.findIndex((n) => n.id === noteId);
     if (noteIndex !== -1) {
@@ -812,13 +821,7 @@ function App() {
                 {database
                   .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
                   .map((note, index) => {
-                    const firstLineBreakIndex = note.content.indexOf('\n');
-                    const title = note.content.substring(
-                      0,
-                      firstLineBreakIndex === -1
-                        ? undefined
-                        : firstLineBreakIndex,
-                    );
+                    const title = getNoteTitle(note);
                     const timestamp = new Date(note.updatedAt).toLocaleString();
 
                     return (
@@ -1006,13 +1009,7 @@ function App() {
                 {filteredDatabase
                   .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
                   .map((note, index) => {
-                    const firstLineBreakIndex = note.content.indexOf('\n');
-                    const title = note.content.substring(
-                      0,
-                      firstLineBreakIndex === -1
-                        ? undefined
-                        : firstLineBreakIndex,
-                    );
+                    const title = getNoteTitle(note);
                     const timestamp = new Date(note.updatedAt).toLocaleString();
 
                     return (
