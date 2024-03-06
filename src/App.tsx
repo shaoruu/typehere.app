@@ -15,6 +15,24 @@ export const decryptText = (cipherText: string, password: string): string => {
   const bytes = CryptoJS.AES.decrypt(cipherText, password);
   return bytes.toString(CryptoJS.enc.Utf8);
 };
+// Updated textsToReplace with additional text replacements for enhanced text processing
+const textsToReplace: [string | RegExp, string][] = [
+  [' -> ', ' → '],
+  [' <- ', ' ← '],
+  ['\n-> ', '\n→ '],
+  ['<- \n', '← \n'],
+  [/^-> /, '→ '],
+  ['...', '…'],
+  ['--', '—'],
+  ['<<', '«'],
+  ['>>', '»'],
+  ['(c)', '©'],
+  ['(r)', '®'],
+  ['+-', '±'],
+  ['1/2', '½'],
+  ['1/4', '¼'],
+  ['3/4', '¾'],
+];
 
 function usePersistentState<T>(storageKey: string, defaultValue?: T) {
   const [data, setData] = useState<T>(() => {
@@ -286,11 +304,20 @@ function App() {
   };
 
   const saveNote = (noteId: string, newText: string) => {
+    let processedText = newText;
+    textsToReplace.forEach(([from, to]) => {
+      if (from instanceof RegExp) {
+        processedText = processedText.replace(from, to);
+      } else {
+        processedText = processedText.split(from).join(to);
+      }
+    });
+
     const noteIndex = database.findIndex((n) => n.id === noteId);
     if (noteIndex !== -1) {
       const updatedNote = {
         ...database[noteIndex],
-        content: newText,
+        content: processedText,
         updatedAt: new Date().toISOString(),
       };
       const newDatabase = [...database];
