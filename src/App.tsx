@@ -5,16 +5,6 @@ import { EnhancedTextarea } from './EnhancedTextarea';
 import LZString from 'lz-string';
 import Fuse from 'fuse.js';
 import AceEditor from 'react-ace';
-import CryptoJS from 'crypto-js';
-
-export const encryptText = (text: string, password: string): string => {
-  return CryptoJS.AES.encrypt(text, password).toString();
-};
-
-export const decryptText = (cipherText: string, password: string): string => {
-  const bytes = CryptoJS.AES.decrypt(cipherText, password);
-  return bytes.toString(CryptoJS.enc.Utf8);
-};
 
 // Updated textsToReplace with additional text replacements for enhanced text processing
 const textsToReplace: [string | RegExp, string][] = [
@@ -75,6 +65,18 @@ type Note = {
   content: string;
   updatedAt: string;
 };
+
+type CmdKSuggestion =
+  | {
+      type: 'note';
+      note: Note;
+    }
+  | {
+      type: 'action';
+      title: string;
+      content: string;
+      onAction: () => void;
+    };
 
 const freshDatabase = [
   {
@@ -244,16 +246,45 @@ function App() {
     }
   }, [currentTheme]);
 
-  const filteredDatabase = useMemo(() => {
+  const cmdKSuggestions = useMemo<CmdKSuggestion[]>(() => {
     const fuse = new Fuse(database, {
       keys: ['content'],
       includeScore: true,
       threshold: 0.3,
     });
-    return cmdKSearchQuery
+    const notes = cmdKSearchQuery
       ? fuse.search(cmdKSearchQuery).map((result) => result.item)
       : database;
-  }, [database, cmdKSearchQuery]);
+    const actions: CmdKSuggestion[] = [
+      ...(cmdKSearchQuery
+        ? [
+            {
+              type: 'action',
+              title: cmdKSearchQuery,
+              content: 'create new note',
+              onAction: () => {
+                openNewNote(cmdKSearchQuery);
+                setIsCmdKMenuOpen(false);
+                setSelectedCmdKNoteIndex(0);
+              },
+            } as CmdKSuggestion,
+          ]
+        : []),
+    ];
+
+    notes.sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
+
+    return [
+      ...notes.map((note) => ({
+        type: 'note' as const,
+        note,
+      })),
+      ...actions,
+    ];
+  }, [cmdKSearchQuery, database, isCmdKMenuOpen]);
 
   const openNote = (noteId: string) => {
     if (!noteId || !database.find((n) => n.id === noteId)) {
@@ -268,6 +299,8 @@ function App() {
     if (n) {
       n.updatedAt = new Date().toISOString();
     }
+
+    setDatabase(database);
 
     setTimeout(() => {
       focus();
@@ -324,6 +357,15 @@ function App() {
     }
   };
 
+  const runCmdKSuggestion = (suggestion?: CmdKSuggestion) => {
+    if (!suggestion) return;
+    if (suggestion.type === 'note') {
+      openNote(suggestion.note.id);
+    } else if (suggestion.type === 'action') {
+      suggestion.onAction();
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // NO PRINT
@@ -354,14 +396,13 @@ function App() {
 
       if (isCmdKMenuOpen) {
         let nextIndex: number | null = null;
+        const length = cmdKSuggestions.length;
         if (e.key === 'ArrowUp' || vimUp) {
           e.preventDefault();
           if (selectedCmdKNoteIndex === null) {
-            nextIndex = filteredDatabase.length - 1;
+            nextIndex = length - 1;
           } else {
-            nextIndex =
-              (selectedCmdKNoteIndex - 1 + filteredDatabase.length) %
-              filteredDatabase.length;
+            nextIndex = (selectedCmdKNoteIndex - 1 + length) % length;
           }
           setSelectedCmdKNoteIndex(nextIndex);
         } else if (e.key === 'ArrowDown' || vimDown) {
@@ -369,17 +410,13 @@ function App() {
           if (selectedCmdKNoteIndex === null) {
             nextIndex = 0;
           } else {
-            nextIndex = (selectedCmdKNoteIndex + 1) % filteredDatabase.length;
+            nextIndex = (selectedCmdKNoteIndex + 1) % length;
           }
           setSelectedCmdKNoteIndex(nextIndex);
         } else if (e.key === 'Enter') {
           e.preventDefault();
-          const noteIdToOpen = filteredDatabase[selectedCmdKNoteIndex]?.id;
-          if (noteIdToOpen) {
-            openNote(filteredDatabase[selectedCmdKNoteIndex!].id);
-          } else {
-            openNewNote(cmdKSearchQuery);
-          }
+          const suggestion = cmdKSuggestions[selectedCmdKNoteIndex];
+          runCmdKSuggestion(suggestion);
           setIsCmdKMenuOpen(false);
           setSelectedCmdKNoteIndex(0);
         }
@@ -493,8 +530,9 @@ function App() {
         (isCmdKMenuOpen || !!listMenuPosition) &&
         (event.key === 'Meta' || event.key === 'Control')
       ) {
-        if (isCmdKMenuOpen && filteredDatabase.length > 0) {
-          openNote(filteredDatabase[selectedCmdKNoteIndex!].id);
+        if (isCmdKMenuOpen && cmdKSuggestions.length > 0) {
+          const suggestion = cmdKSuggestions[selectedCmdKNoteIndex];
+          runCmdKSuggestion(suggestion);
         } else {
           openNote(database[selectedListNoteIndex!].id);
         }
@@ -517,7 +555,6 @@ function App() {
   }, [
     database,
     database.length,
-    filteredDatabase,
     hasVimNavigated,
     isCmdKMenuOpen,
     listMenuPosition,
@@ -527,6 +564,11 @@ function App() {
     selectedListNoteIndex,
     textValue,
     isNarrowScreen,
+    isHelpMenuOpen,
+    isUsingVim,
+    focus,
+    cmdKSuggestions,
+    setIsNarrowScreen,
   ]);
 
   useEffect(() => {
@@ -962,78 +1004,9 @@ function App() {
                   padding: 4,
                 }}
               >
-                {filteredDatabase.length === 0 && (
-                  <div
-                    id={`note-list-cmdk-item-${0}`}
-                    className="note-list-item"
-                    onClick={() => {
-                      openNewNote(cmdKSearchQuery);
-                      setIsCmdKMenuOpen(false);
-                      setSelectedCmdKNoteIndex(0);
-                    }}
-                    style={{
-                      backgroundColor: 'var(--note-selected-background-color)',
-                    }}
-                  >
-                    <div className="note-list-item-top">
-                      <div
-                        className="note-list-item-title"
-                        style={{
-                          fontWeight: 'normal',
-                          fontStyle: 'normal',
-                          color: 'var(--dark-color)',
-                        }}
-                      >
-                        {cmdKSearchQuery}
-                      </div>
-                      <p
-                        style={{
-                          marginLeft: '4px',
-                          fontSize: '0.8rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          padding: '2px 4px',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          color: 'var(--on-fill-color)',
-                          background: 'var(--keyboard-key-color)',
-                        }}
-                      >
-                        Enter{' '}
-                        <span
-                          style={{
-                            marginLeft: '4px',
-                            marginBottom: '1px',
-                          }}
-                        >
-                          ↵
-                        </span>
-                      </p>
-                    </div>
-                    <div
-                      className="note-list-item-timestamp"
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <p>create new note</p>
-                    </div>
-                  </div>
-                  // <div
-                  //   style={{
-                  //     opacity: 0.5,
-                  //     padding: '4px',
-                  //     color: 'var(--dark-color)',
-                  //   }}
-                  // >
-                  //   No notes found...
-                  // </div>
-                )}
-                {filteredDatabase
-                  .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-                  .map((note, index) => {
+                {cmdKSuggestions.map((suggestion, index) => {
+                  if (suggestion.type === 'note') {
+                    const note = suggestion.note;
                     const title = getNoteTitle(note);
                     const timestamp = new Date(note.updatedAt).toLocaleString();
 
@@ -1083,7 +1056,70 @@ function App() {
                         </div>
                       </div>
                     );
-                  })}
+                  }
+
+                  const { title, onAction, content } = suggestion;
+
+                  return (
+                    <div
+                      id={`note-list-cmdk-item-${index}`}
+                      className="note-list-item"
+                      onClick={onAction}
+                      style={{
+                        backgroundColor:
+                          index === selectedCmdKNoteIndex
+                            ? 'var(--note-selected-background-color)'
+                            : 'var(--note-background-color)',
+                      }}
+                    >
+                      <div className="note-list-item-top">
+                        <div
+                          className="note-list-item-title"
+                          style={{
+                            fontWeight: 'normal',
+                            fontStyle: 'normal',
+                            color: 'var(--dark-color)',
+                          }}
+                        >
+                          {title}
+                        </div>
+                        <p
+                          style={{
+                            marginLeft: '4px',
+                            fontSize: '0.8rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            padding: '2px 4px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            color: 'var(--on-fill-color)',
+                            background: 'var(--keyboard-key-color)',
+                          }}
+                        >
+                          Enter{' '}
+                          <span
+                            style={{
+                              marginLeft: '4px',
+                              marginBottom: '1px',
+                            }}
+                          >
+                            ↵
+                          </span>
+                        </p>
+                      </div>
+                      <div
+                        className="note-list-item-timestamp"
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <p>{content}</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </>,
