@@ -306,6 +306,7 @@ function App() {
         const editor = aceEditorRef.current.editor;
         editor.getSession().getUndoManager().reset();
         editor.clearSelection();
+        editor.moveCursorTo(0, 0);
       }
     }, 10);
   };
