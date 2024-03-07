@@ -29,9 +29,6 @@ const textsToReplace: [string | RegExp, string][] = [
   ['(c)', '©'],
   ['(r)', '®'],
   ['+-', '±'],
-  ['1/2', '½'],
-  ['1/4', '¼'],
-  ['3/4', '¾'],
 ];
 
 function usePersistentState<T>(storageKey: string, defaultValue?: T) {
