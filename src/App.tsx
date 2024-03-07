@@ -13,10 +13,7 @@ const textsToReplace: [string | RegExp, string][] = [
   ['\n-> ', '\n→ '],
   ['<- \n', '← \n'],
   [/^-> /, '→ '],
-  ['...', '…'],
-  ['--', '—'],
-  ['<<', '«'],
-  ['>>', '»'],
+  [/^<- /, '← '],
   ['(c)', '©'],
   ['(r)', '®'],
   ['+-', '±'],
@@ -336,13 +333,31 @@ function App() {
 
   const saveNote = (noteId: string, newText: string) => {
     let processedText = newText;
-    textsToReplace.forEach(([from, to]) => {
-      if (from instanceof RegExp) {
-        processedText = processedText.replace(from, to);
-      } else {
-        processedText = processedText.split(from).join(to);
-      }
-    });
+    if (aceEditorRef.current) {
+      const editor = aceEditorRef.current.editor;
+      textsToReplace.forEach(([from, to]) => {
+        if (from instanceof RegExp) {
+          editor.replaceAll(to, {
+            needle: from,
+            regExp: true,
+          });
+        } else {
+          editor.replaceAll(to, {
+            needle: from,
+            regExp: false,
+          });
+        }
+      });
+      processedText = editor.getValue();
+    } else {
+      textsToReplace.forEach(([from, to]) => {
+        if (from instanceof RegExp) {
+          processedText = processedText.replace(from, to);
+        } else {
+          processedText = processedText.split(from).join(to);
+        }
+      });
+    }
 
     const noteIndex = database.findIndex((n) => n.id === noteId);
     if (noteIndex !== -1) {
