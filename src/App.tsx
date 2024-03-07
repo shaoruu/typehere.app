@@ -15,6 +15,7 @@ export const decryptText = (cipherText: string, password: string): string => {
   const bytes = CryptoJS.AES.decrypt(cipherText, password);
   return bytes.toString(CryptoJS.enc.Utf8);
 };
+
 // Updated textsToReplace with additional text replacements for enhanced text processing
 const textsToReplace: [string | RegExp, string][] = [
   [' -> ', ' → '],
