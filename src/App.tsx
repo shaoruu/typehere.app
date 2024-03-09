@@ -243,6 +243,13 @@ function App() {
     }
   }, [currentTheme]);
 
+  const sortNotes = (notes: Note[]) => {
+    return notes.sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
+  };
+
   const cmdKSuggestions = useMemo<CmdKSuggestion[]>(() => {
     const fuse = new Fuse(database, {
       keys: ['content'],
@@ -269,10 +276,7 @@ function App() {
         : []),
     ];
 
-    notes.sort(
-      (a, b) =>
-        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-    );
+    sortNotes(notes);
 
     return [
       ...notes.map((note) => ({
@@ -901,59 +905,57 @@ function App() {
                 }}
                 className="notes-list no-scrollbar"
               >
-                {database
-                  .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-                  .map((note, index) => {
-                    const title = getNoteTitle(note);
-                    const timestamp = new Date(note.updatedAt).toLocaleString();
+                {sortNotes(database).map((note, index) => {
+                  const title = getNoteTitle(note);
+                  const timestamp = new Date(note.updatedAt).toLocaleString();
 
-                    return (
-                      <div
-                        key={note.id}
-                        id={`note-list-item-${index}`}
-                        className="note-list-item"
-                        onClick={() => {
-                          openNote(note.id);
-                        }}
-                        style={{
-                          backgroundColor:
-                            index === selectedListNoteIndex
-                              ? 'var(--note-selected-background-color)'
-                              : 'var(--note-background-color)',
-                        }}
-                      >
-                        <div className="note-list-item-top">
-                          <div
-                            className="note-list-item-title"
-                            style={{
-                              fontWeight:
-                                note.id === currentNoteId ? 'bold' : 'normal',
-                              fontStyle: title ? 'normal' : 'italic',
-                              color: title
-                                ? 'var(--dark-color)'
-                                : 'var(--untitled-note-title-color)',
+                  return (
+                    <div
+                      key={note.id}
+                      id={`note-list-item-${index}`}
+                      className="note-list-item"
+                      onClick={() => {
+                        openNote(note.id);
+                      }}
+                      style={{
+                        backgroundColor:
+                          index === selectedListNoteIndex
+                            ? 'var(--note-selected-background-color)'
+                            : 'var(--note-background-color)',
+                      }}
+                    >
+                      <div className="note-list-item-top">
+                        <div
+                          className="note-list-item-title"
+                          style={{
+                            fontWeight:
+                              note.id === currentNoteId ? 'bold' : 'normal',
+                            fontStyle: title ? 'normal' : 'italic',
+                            color: title
+                              ? 'var(--dark-color)'
+                              : 'var(--untitled-note-title-color)',
+                          }}
+                        >
+                          {title || 'New Note'}
+                        </div>
+                        {database.length > 1 && (
+                          <button
+                            className="note-list-item-delete-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteNote(note.id);
                             }}
                           >
-                            {title || 'New Note'}
-                          </div>
-                          {database.length > 1 && (
-                            <button
-                              className="note-list-item-delete-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteNote(note.id);
-                              }}
-                            >
-                              Delete
-                            </button>
-                          )}
-                        </div>
-                        <div className="note-list-item-timestamp">
-                          {timestamp}
-                        </div>
+                            Delete
+                          </button>
+                        )}
                       </div>
-                    );
-                  })}
+                      <div className="note-list-item-timestamp">
+                        {timestamp}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </>,
             document.body,
