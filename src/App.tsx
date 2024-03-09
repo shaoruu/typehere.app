@@ -61,6 +61,7 @@ type Note = {
   id: string;
   content: string;
   updatedAt: string;
+  workspace?: string;
 };
 
 type CmdKSuggestion =
@@ -72,6 +73,7 @@ type CmdKSuggestion =
       type: 'action';
       title: string;
       content: string;
+      color?: string;
       onAction: () => void;
     };
 
@@ -145,6 +147,12 @@ if (localStorage.getItem(themeId) === '"dark"') {
   document.documentElement.setAttribute('data-theme', 'dark');
 }
 
+const sortNotes = (notes: Note[]) => {
+  return notes.sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+  );
+};
+
 function App() {
   const textareaDomRef = useRef<HTMLTextAreaElement>(null);
 
@@ -155,6 +163,9 @@ function App() {
 
   usePeriodicBackup(database);
 
+  const [currentWorkspace, setCurrentWorkspace] = usePersistentState<
+    string | null
+  >('typehere-currentWorkspace', null);
   const [currentNoteId, setCurrentNoteId] = usePersistentState<string>(
     'typehere-currentNoteId',
     freshDatabase[0].id,
@@ -174,15 +185,44 @@ function App() {
     column: 0,
   });
 
+  const workspaceNotes = useMemo(() => {
+    return currentWorkspace === null
+      ? database
+      : database.filter((n) => n.workspace === currentWorkspace);
+  }, [database, currentWorkspace]);
+
+  const availableWorkspaces = useMemo(() => {
+    const seenWorkspaces = new Set<string>();
+    const allWorkspaces: string[] = [];
+    const shallowDatabase = sortNotes([...database]);
+
+    for (const note of shallowDatabase) {
+      if (!note.workspace || seenWorkspaces.has(note.workspace)) {
+        continue;
+      }
+
+      allWorkspaces.push(note.workspace);
+      seenWorkspaces.add(note.workspace);
+    }
+
+    return allWorkspaces;
+  }, [database]);
+
+  const navigableWorkspaces = useMemo(() => {
+    return [null, ...availableWorkspaces];
+  }, [availableWorkspaces]);
+
   useEffect(() => {
-    const currentNote = database.find((note) => note.id === currentNoteId);
+    const currentNote = workspaceNotes.find(
+      (note) => note.id === currentNoteId,
+    );
     if (currentNote) {
       setTextValue(currentNote.content);
     } else {
-      setCurrentNoteId(database[0].id);
-      setTextValue(database[0].content);
+      setCurrentNoteId(workspaceNotes[0].id);
+      setTextValue(workspaceNotes[0].content);
     }
-  }, [currentNoteId, database, setCurrentNoteId]);
+  }, [currentNoteId, workspaceNotes, setCurrentNoteId]);
 
   const focus = () => {
     if (aceEditorRef.current) {
@@ -224,6 +264,7 @@ function App() {
     'typehere-narrow',
     false,
   );
+  // const [freshlyDeletedNotes, setFreshlyDeletedNotes]
 
   const toggleTheme = () => {
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
@@ -243,38 +284,96 @@ function App() {
     }
   }, [currentTheme]);
 
-  const sortNotes = (notes: Note[]) => {
-    return notes.sort(
-      (a, b) =>
-        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-    );
-  };
-
   const cmdKSuggestions = useMemo<CmdKSuggestion[]>(() => {
-    const fuse = new Fuse(database, {
+    const notesFuse = new Fuse(workspaceNotes, {
       keys: ['content'],
       includeScore: true,
       threshold: 0.3,
     });
+    const workspaceFuse = new Fuse(availableWorkspaces, {
+      includeScore: true,
+      threshold: 0.05, // lower for workspace match
+    });
     const notes = cmdKSearchQuery
-      ? fuse.search(cmdKSearchQuery).map((result) => result.item)
-      : database;
-    const actions: CmdKSuggestion[] = [
+      ? notesFuse.search(cmdKSearchQuery).map((result) => result.item)
+      : workspaceNotes;
+    const workspaces = cmdKSearchQuery
+      ? workspaceFuse.search(cmdKSearchQuery).map((result) => result.item)
+      : [];
+    const actions = [
       ...(cmdKSearchQuery
         ? [
             {
               type: 'action',
-              title: cmdKSearchQuery,
-              content: 'create new note',
+              content: `"${cmdKSearchQuery}"`,
+              title: 'create new note',
               onAction: () => {
                 openNewNote(cmdKSearchQuery);
                 setIsCmdKMenuOpen(false);
                 setSelectedCmdKNoteIndex(0);
               },
-            } as CmdKSuggestion,
+            },
+            ...(workspaces.length > 0
+              ? [
+                  {
+                    type: 'action',
+                    title: `move note to ${workspaces[0]}`,
+                    content: `→ ${workspaces[0]}`,
+                    onAction() {
+                      const currentNote = database.find(
+                        (note) => note.id === currentNoteId,
+                      );
+                      if (!currentNote) {
+                        console.warn('weird weird weird');
+                        return;
+                      }
+                      currentNote.workspace = workspaces[0] ?? undefined;
+                      setDatabase(database);
+                      setCurrentWorkspace(workspaces[0]);
+                    },
+                  },
+                ]
+              : []),
+            {
+              type: 'action',
+              title: 'rename workspace',
+              content: `± ${cmdKSearchQuery}`,
+              onAction: () => {
+                const newDatabase = [...database].map((n) => {
+                  if (n.workspace !== currentWorkspace) {
+                    return n;
+                  }
+                  return {
+                    ...n,
+                    workspace: cmdKSearchQuery,
+                  };
+                });
+                setCurrentWorkspace(cmdKSearchQuery);
+                setSelectedCmdKNoteIndex(0);
+                setDatabase(newDatabase);
+              },
+            },
+            ...(availableWorkspaces.find(
+              (workspace) => workspace === cmdKSearchQuery,
+            )
+              ? currentWorkspace
+                ? []
+                : []
+              : [
+                  {
+                    type: 'action',
+                    title: 'create workspace',
+                    content: `+ ${cmdKSearchQuery}`,
+                    onAction: () => {
+                      openNewNote('', cmdKSearchQuery);
+                      setSelectedCmdKNoteIndex(0);
+                      setCurrentWorkspace(cmdKSearchQuery);
+                    },
+                  },
+                ]),
           ]
         : []),
-    ];
+    ] as CmdKSuggestion[];
 
     sortNotes(notes);
 
@@ -285,7 +384,7 @@ function App() {
       })),
       ...actions,
     ];
-  }, [cmdKSearchQuery, database, isCmdKMenuOpen]);
+  }, [cmdKSearchQuery, workspaceNotes, isCmdKMenuOpen, availableWorkspaces]);
 
   const openNote = (noteId: string) => {
     if (!noteId || !database.find((n) => n.id === noteId)) {
@@ -315,16 +414,23 @@ function App() {
     }, 10);
   };
 
-  const openNewNote = (defaultContent: string = '') => {
+  const openNewNote = (
+    defaultContent: string = '',
+    defaultWorkspace: string = '',
+  ) => {
     const newNote: Note = {
       id: getRandomId(),
       content: defaultContent,
       updatedAt: new Date().toISOString(),
+      workspace: (defaultWorkspace || currentWorkspace) ?? undefined,
     };
+
     setDatabase([...database, newNote]);
     setCurrentNoteId(newNote.id);
     setTextValue('');
     openNote(newNote.id);
+
+    return newNote;
   };
 
   const getNoteTitle = (note: Note) => {
@@ -433,20 +539,68 @@ function App() {
             nextIndex = (selectedCmdKNoteIndex + 1) % length;
           }
           setSelectedCmdKNoteIndex(nextIndex);
-        } else if (e.key === 'Enter') {
-          e.preventDefault();
-          const suggestion = cmdKSuggestions[selectedCmdKNoteIndex];
-          runCmdKSuggestion(suggestion);
-          setIsCmdKMenuOpen(false);
-          setSelectedCmdKNoteIndex(0);
         }
+
         if (nextIndex !== null) {
           const elementId = `note-list-cmdk-item-${nextIndex}`;
           const element = document.getElementById(elementId);
           if (element) {
             element.scrollIntoView({ block: 'center' });
           }
+          return;
         }
+
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const suggestion = cmdKSuggestions[selectedCmdKNoteIndex];
+          runCmdKSuggestion(suggestion);
+          setIsCmdKMenuOpen(false);
+          setSelectedCmdKNoteIndex(0);
+          return;
+        }
+
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          setSelectedListNoteIndex(0);
+          openNote(database[selectedListNoteIndex!].id);
+          return;
+        }
+
+        let nextWorkspaceIndex: number | null = null;
+        const currentIndex = navigableWorkspaces.indexOf(currentWorkspace);
+        if (currentIndex === -1) {
+          console.warn('wtf?'); // not supposed to happen
+        } else {
+          if (
+            (e.key === 'u' && (e.ctrlKey || e.metaKey)) ||
+            e.key === 'ArrowLeft'
+          ) {
+            e.preventDefault();
+            nextWorkspaceIndex =
+              (currentIndex - 1 + navigableWorkspaces.length) %
+              navigableWorkspaces.length;
+          }
+
+          if (
+            (e.key === 'i' && (e.ctrlKey || e.metaKey)) ||
+            e.key === 'ArrowRight'
+          ) {
+            e.preventDefault();
+            nextWorkspaceIndex =
+              (currentIndex + 1) % navigableWorkspaces.length;
+          }
+
+          if (nextWorkspaceIndex !== null) {
+            const nextWorkspace = navigableWorkspaces[nextWorkspaceIndex];
+            if (nextWorkspace !== currentWorkspace) {
+              setSelectedCmdKNoteIndex(0);
+              setCurrentWorkspace(nextWorkspace);
+            }
+          }
+
+          return;
+        }
+
         return;
       }
 
@@ -469,24 +623,17 @@ function App() {
               (selectedListNoteIndex - 1 + database.length) % database.length;
           }
           setSelectedListNoteIndex(nextIndex);
-        } else if (e.key === 'Enter') {
-          e.preventDefault();
-          setSelectedListNoteIndex(0);
-          openNote(database[selectedListNoteIndex!].id);
         }
+
         if (nextIndex !== null) {
           const elementId = `note-list-item-${nextIndex}`;
           const element = document.getElementById(elementId);
           if (element) {
             element.scrollIntoView({ block: 'center' });
           }
+          return;
         }
-        return;
-      }
 
-      if (e.key === 'i' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        setIsNarrowScreen(!isNarrowScreen);
         return;
       }
 
@@ -589,6 +736,10 @@ function App() {
     focus,
     cmdKSuggestions,
     setIsNarrowScreen,
+    currentWorkspace,
+    navigableWorkspaces,
+    runCmdKSuggestion,
+    setCurrentWorkspace,
   ]);
 
   useEffect(() => {
@@ -938,7 +1089,7 @@ function App() {
                         >
                           {title || 'New Note'}
                         </div>
-                        {database.length > 1 && (
+                        {workspaceNotes.length > 1 && (
                           <button
                             className="note-list-item-delete-btn"
                             onClick={(e) => {
@@ -1057,20 +1208,48 @@ function App() {
                           >
                             {title || 'New Note'}
                           </div>
-                          {database.length > 1 && (
+                          {workspaceNotes.length > 1 && (
                             <button
                               className="note-list-item-delete-btn"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 deleteNote(note.id);
                               }}
+                              style={{
+                                visibility:
+                                  index === selectedCmdKNoteIndex
+                                    ? 'visible'
+                                    : 'hidden',
+                              }}
                             >
                               Delete
                             </button>
                           )}
                         </div>
-                        <div className="note-list-item-timestamp">
-                          {timestamp}
+                        <div
+                          className="note-list-item-timestamp"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          <span>{timestamp}</span>
+                          {!currentWorkspace && note.workspace && (
+                            <>
+                              <span>•</span>
+                              <span
+                                style={{
+                                  overflow: 'hidden',
+                                  whiteSpace: 'nowrap',
+                                  textOverflow: 'ellipsis',
+                                  direction: 'rtl',
+                                }}
+                              >
+                                {note.workspace}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                     );
@@ -1112,6 +1291,10 @@ function App() {
                             cursor: 'pointer',
                             color: 'var(--on-fill-color)',
                             background: 'var(--keyboard-key-color)',
+                            visibility:
+                              index === selectedCmdKNoteIndex
+                                ? 'visible'
+                                : 'hidden',
                           }}
                         >
                           Enter{' '}
@@ -1138,6 +1321,22 @@ function App() {
                     </div>
                   );
                 })}
+              </div>
+              <div
+                style={{
+                  outline: 'none',
+                  padding: '4px 8px',
+                  fontSize: '0.75rem',
+                  borderTop: '1px solid var(--border-color)',
+                  color: 'var(--dark-color)',
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  opacity: 0.6,
+                }}
+              >
+                {currentWorkspace
+                  ? `workspace: ${currentWorkspace}`
+                  : `all notes`}
               </div>
             </div>
           </>,
