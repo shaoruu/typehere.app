@@ -74,8 +74,11 @@ type CmdKSuggestion =
       title: string;
       content: string;
       color?: string;
-      onAction: () => void;
+      // return true to close the cmd-k menu
+      onAction: () => boolean;
     };
+
+const cmdKSuggestionActionType = 'action' as const;
 
 const freshDatabase = [
   {
@@ -170,10 +173,6 @@ function App() {
     'typehere-currentNoteId',
     freshDatabase[0].id,
   );
-  const [listMenuPosition, setListMenuPosition] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
   const [moreMenuPosition, setMoreMenuPosition] = useState<{
     x: number;
     y: number;
@@ -248,13 +247,11 @@ function App() {
   };
 
   const fileInputDomRef = useRef<HTMLInputElement>(null);
-  const listDomRef = useRef<HTMLButtonElement>(null);
 
   const [currentTheme, setCurrentTheme] = usePersistentState<'light' | 'dark'>(
     themeId,
     'light',
   );
-  const [selectedListNoteIndex, setSelectedListNoteIndex] = useState<number>(0);
   const [selectedCmdKNoteIndex, setSelectedCmdKNoteIndex] = useState<number>(0);
   const [cmdKSearchQuery, setCmdKSearchQuery] = useState('');
   const [isCmdKMenuOpen, setIsCmdKMenuOpen] = useState(false);
@@ -264,7 +261,7 @@ function App() {
     'typehere-narrow',
     false,
   );
-  // const [freshlyDeletedNotes, setFreshlyDeletedNotes]
+  const [freshlyDeletedNotes, setFreshlyDeletedNotes] = useState<Note[]>([]);
 
   const toggleTheme = () => {
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
@@ -300,23 +297,25 @@ function App() {
     const workspaces = cmdKSearchQuery
       ? workspaceFuse.search(cmdKSearchQuery).map((result) => result.item)
       : [];
-    const actions = [
+    const actions: CmdKSuggestion[] = [
       ...(cmdKSearchQuery
         ? [
             {
-              type: 'action',
+              type: cmdKSuggestionActionType,
               content: `"${cmdKSearchQuery}"`,
               title: 'create new note',
               onAction: () => {
                 openNewNote(cmdKSearchQuery);
                 setIsCmdKMenuOpen(false);
                 setSelectedCmdKNoteIndex(0);
+                setCmdKSearchQuery('');
+                return true;
               },
             },
             ...(workspaces.length > 0
               ? [
                   {
-                    type: 'action',
+                    type: cmdKSuggestionActionType,
                     title: `move note to ${workspaces[0]}`,
                     content: `→ ${workspaces[0]}`,
                     onAction() {
@@ -325,17 +324,21 @@ function App() {
                       );
                       if (!currentNote) {
                         console.warn('weird weird weird');
-                        return;
+                        return true;
                       }
                       currentNote.workspace = workspaces[0] ?? undefined;
                       setDatabase(database);
                       setCurrentWorkspace(workspaces[0]);
+                      setSelectedCmdKNoteIndex(0);
+                      openNote(currentNote.id);
+                      setCmdKSearchQuery('');
+                      return false;
                     },
                   },
                 ]
               : []),
             {
-              type: 'action',
+              type: cmdKSuggestionActionType,
               title: 'rename workspace',
               content: `± ${cmdKSearchQuery}`,
               onAction: () => {
@@ -349,8 +352,9 @@ function App() {
                   };
                 });
                 setCurrentWorkspace(cmdKSearchQuery);
-                setSelectedCmdKNoteIndex(0);
                 setDatabase(newDatabase);
+                setCmdKSearchQuery('');
+                return false;
               },
             },
             ...(availableWorkspaces.find(
@@ -361,19 +365,21 @@ function App() {
                 : []
               : [
                   {
-                    type: 'action',
+                    type: cmdKSuggestionActionType,
                     title: 'create workspace',
                     content: `+ ${cmdKSearchQuery}`,
                     onAction: () => {
                       openNewNote('', cmdKSearchQuery);
                       setSelectedCmdKNoteIndex(0);
                       setCurrentWorkspace(cmdKSearchQuery);
+                      setCmdKSearchQuery('');
+                      return false;
                     },
                   },
                 ]),
           ]
         : []),
-    ] as CmdKSuggestion[];
+    ];
 
     sortNotes(notes);
 
@@ -393,7 +399,6 @@ function App() {
 
     setLastAceCursorPosition({ row: 0, column: 0 });
     setCurrentNoteId(noteId);
-    setListMenuPosition(null);
 
     const n = database.find((n) => n.id === noteId);
     if (n) {
@@ -483,13 +488,15 @@ function App() {
     }
   };
 
-  const runCmdKSuggestion = (suggestion?: CmdKSuggestion) => {
-    if (!suggestion) return;
+  const runCmdKSuggestion = (suggestion?: CmdKSuggestion): boolean => {
+    if (!suggestion) return true;
     if (suggestion.type === 'note') {
       openNote(suggestion.note.id);
+      return true;
     } else if (suggestion.type === 'action') {
-      suggestion.onAction();
+      return suggestion.onAction();
     }
+    return false;
   };
 
   useEffect(() => {
@@ -506,17 +513,10 @@ function App() {
         return;
       }
 
-      if (!!listMenuPosition && e.key === 'Escape') {
-        e.preventDefault();
-        setListMenuPosition(null);
-        focus();
-        return;
-      }
-
       const vimUp = (e.ctrlKey || e.metaKey) && e.key === 'k';
       const vimDown = (e.ctrlKey || e.metaKey) && e.key === 'j';
 
-      if ((isCmdKMenuOpen || !!listMenuPosition) && (vimUp || vimDown)) {
+      if (isCmdKMenuOpen && (vimUp || vimDown)) {
         setHasVimNavigated(true);
       }
 
@@ -553,16 +553,11 @@ function App() {
         if (e.key === 'Enter') {
           e.preventDefault();
           const suggestion = cmdKSuggestions[selectedCmdKNoteIndex];
-          runCmdKSuggestion(suggestion);
-          setIsCmdKMenuOpen(false);
-          setSelectedCmdKNoteIndex(0);
-          return;
-        }
-
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          setSelectedListNoteIndex(0);
-          openNote(database[selectedListNoteIndex!].id);
+          const shouldCloseCmdK = runCmdKSuggestion(suggestion);
+          if (shouldCloseCmdK) {
+            setIsCmdKMenuOpen(false);
+            setSelectedCmdKNoteIndex(0);
+          }
           return;
         }
 
@@ -604,39 +599,6 @@ function App() {
         return;
       }
 
-      if (listMenuPosition) {
-        let nextIndex: number | null = null;
-        if (e.key === 'ArrowUp' || vimUp) {
-          e.preventDefault();
-          if (selectedListNoteIndex === null) {
-            nextIndex = 0;
-          } else {
-            nextIndex = (selectedListNoteIndex + 1) % database.length;
-          }
-          setSelectedListNoteIndex(nextIndex);
-        } else if (e.key === 'ArrowDown' || vimDown) {
-          e.preventDefault();
-          if (selectedListNoteIndex === null) {
-            nextIndex = database.length - 1;
-          } else {
-            nextIndex =
-              (selectedListNoteIndex - 1 + database.length) % database.length;
-          }
-          setSelectedListNoteIndex(nextIndex);
-        }
-
-        if (nextIndex !== null) {
-          const elementId = `note-list-item-${nextIndex}`;
-          const element = document.getElementById(elementId);
-          if (element) {
-            element.scrollIntoView({ block: 'center' });
-          }
-          return;
-        }
-
-        return;
-      }
-
       if (isHelpMenuOpen && (e.key === 'Escape' || e.key === 'Enter')) {
         e.preventDefault();
         setIsHelpMenuOpen((prev) => !prev);
@@ -655,23 +617,6 @@ function App() {
       }
 
       if (
-        (e.key === '/' || e.key === 'm') &&
-        (e.metaKey || e.ctrlKey) &&
-        listDomRef.current
-      ) {
-        const list = listDomRef.current;
-        textareaDomRef.current?.blur();
-        setSelectedListNoteIndex(0);
-        const rect = list.getBoundingClientRect();
-        setIsHelpMenuOpen(false);
-        setListMenuPosition({
-          x: window.innerWidth - (rect.x + rect.width),
-          y: window.innerHeight - rect.y + 4,
-        });
-        return;
-      }
-
-      if (
         e.key === 'Enter' &&
         (e.metaKey || e.ctrlKey) &&
         e.shiftKey &&
@@ -684,7 +629,7 @@ function App() {
 
       if (e.key === 'Enter') {
         focus();
-      } else if (isUsingVim && !isCmdKMenuOpen && !listMenuPosition) {
+      } else if (isUsingVim && !isCmdKMenuOpen) {
         if (document.activeElement === document.body) {
           aceEditorRef.current?.editor.focus();
         }
@@ -694,18 +639,19 @@ function App() {
     const handleKeyUp = (event: KeyboardEvent) => {
       if (
         hasVimNavigated &&
-        (isCmdKMenuOpen || !!listMenuPosition) &&
+        isCmdKMenuOpen &&
         (event.key === 'Meta' || event.key === 'Control')
       ) {
-        if (isCmdKMenuOpen && cmdKSuggestions.length > 0) {
+        let shouldCloseCmdK: boolean = true;
+        if (cmdKSuggestions.length > 0) {
           const suggestion = cmdKSuggestions[selectedCmdKNoteIndex];
-          runCmdKSuggestion(suggestion);
-        } else {
-          openNote(database[selectedListNoteIndex!].id);
+          shouldCloseCmdK = runCmdKSuggestion(suggestion);
         }
 
-        setIsCmdKMenuOpen(false);
-        setListMenuPosition(null);
+        if (shouldCloseCmdK) {
+          setIsCmdKMenuOpen(false);
+        }
+
         setHasVimNavigated(false);
 
         focus();
@@ -724,11 +670,9 @@ function App() {
     database.length,
     hasVimNavigated,
     isCmdKMenuOpen,
-    listMenuPosition,
     openNewNote,
     openNote,
     selectedCmdKNoteIndex,
-    selectedListNoteIndex,
     textValue,
     isNarrowScreen,
     isHelpMenuOpen,
@@ -1016,101 +960,6 @@ function App() {
             new
           </button>
         )}
-        <button
-          ref={listDomRef}
-          tabIndex={-1}
-          onClick={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            setListMenuPosition({
-              x: window.innerWidth - (rect.x + rect.width),
-              y: window.innerHeight - rect.y + 4,
-            });
-          }}
-        >
-          list
-        </button>
-        {listMenuPosition &&
-          createPortal(
-            <>
-              <div
-                style={{
-                  width: '100vw',
-                  height: '100vh',
-                  position: 'fixed',
-                  top: 0,
-                  left: 0,
-                }}
-                onClick={() => {
-                  setListMenuPosition(null);
-                }}
-              />
-              <div
-                style={{
-                  position: 'fixed',
-                  right: listMenuPosition.x,
-                  bottom: listMenuPosition.y,
-                  zIndex: 100,
-                  width: '200px',
-                  backgroundColor: 'var(--note-background-color)',
-                  boxShadow: '0 4px 6px var(--box-shadow-color)',
-                }}
-                className="notes-list no-scrollbar"
-              >
-                {sortNotes(database).map((note, index) => {
-                  const title = getNoteTitle(note);
-                  const timestamp = new Date(note.updatedAt).toLocaleString();
-
-                  return (
-                    <div
-                      key={note.id}
-                      id={`note-list-item-${index}`}
-                      className="note-list-item"
-                      onClick={() => {
-                        openNote(note.id);
-                      }}
-                      style={{
-                        backgroundColor:
-                          index === selectedListNoteIndex
-                            ? 'var(--note-selected-background-color)'
-                            : 'var(--note-background-color)',
-                      }}
-                    >
-                      <div className="note-list-item-top">
-                        <div
-                          className="note-list-item-title"
-                          style={{
-                            fontWeight:
-                              note.id === currentNoteId ? 'bold' : 'normal',
-                            fontStyle: title ? 'normal' : 'italic',
-                            color: title
-                              ? 'var(--dark-color)'
-                              : 'var(--untitled-note-title-color)',
-                          }}
-                        >
-                          {title || 'New Note'}
-                        </div>
-                        {workspaceNotes.length > 1 && (
-                          <button
-                            className="note-list-item-delete-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteNote(note.id);
-                            }}
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                      <div className="note-list-item-timestamp">
-                        {timestamp}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>,
-            document.body,
-          )}
       </div>
       {isCmdKMenuOpen &&
         createPortal(
@@ -1208,23 +1057,27 @@ function App() {
                           >
                             {title || 'New Note'}
                           </div>
-                          {workspaceNotes.length > 1 && (
-                            <button
-                              className="note-list-item-delete-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteNote(note.id);
-                              }}
-                              style={{
-                                visibility:
-                                  index === selectedCmdKNoteIndex
-                                    ? 'visible'
-                                    : 'hidden',
-                              }}
-                            >
-                              Delete
-                            </button>
-                          )}
+                          <button
+                            className="note-list-item-delete-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteNote(note.id);
+                            }}
+                            style={{
+                              visibility:
+                                workspaceNotes.length > 1 &&
+                                index === selectedCmdKNoteIndex
+                                  ? 'visible'
+                                  : 'hidden',
+                              pointerEvents:
+                                workspaceNotes.length > 1 &&
+                                index === selectedCmdKNoteIndex
+                                  ? 'auto'
+                                  : 'none',
+                            }}
+                          >
+                            Delete
+                          </button>
                         </div>
                         <div
                           className="note-list-item-timestamp"
