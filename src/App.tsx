@@ -238,6 +238,9 @@ function App() {
   };
 
   const deleteNote = (noteId: string) => {
+    const deletedNote = database.find((note) => note.id === noteId);
+    if (!deletedNote) return;
+    setFreshlyDeletedNotes((prev) => [...prev, deletedNote]);
     const updatedDatabase = database.filter((note) => note.id !== noteId);
     setDatabase(updatedDatabase);
     if (currentNoteId === noteId) {
@@ -252,7 +255,8 @@ function App() {
     themeId,
     'light',
   );
-  const [selectedCmdKNoteIndex, setSelectedCmdKNoteIndex] = useState<number>(0);
+  const [selectedCmdKSuggestionIndex, setSelectedCmdKSuggestionIndex] =
+    useState<number>(0);
   const [cmdKSearchQuery, setCmdKSearchQuery] = useState('');
   const [isCmdKMenuOpen, setIsCmdKMenuOpen] = useState(false);
   const [hasVimNavigated, setHasVimNavigated] = useState(false);
@@ -307,7 +311,7 @@ function App() {
               onAction: () => {
                 openNewNote(cmdKSearchQuery);
                 setIsCmdKMenuOpen(false);
-                setSelectedCmdKNoteIndex(0);
+                setSelectedCmdKSuggestionIndex(0);
                 setCmdKSearchQuery('');
                 return true;
               },
@@ -329,7 +333,7 @@ function App() {
                       currentNote.workspace = workspaces[0] ?? undefined;
                       setDatabase(database);
                       setCurrentWorkspace(workspaces[0]);
-                      setSelectedCmdKNoteIndex(0);
+                      setSelectedCmdKSuggestionIndex(0);
                       openNote(currentNote.id);
                       setCmdKSearchQuery('');
                       return false;
@@ -370,7 +374,7 @@ function App() {
                     content: `+ ${cmdKSearchQuery}`,
                     onAction: () => {
                       openNewNote('', cmdKSearchQuery);
-                      setSelectedCmdKNoteIndex(0);
+                      setSelectedCmdKSuggestionIndex(0);
                       setCurrentWorkspace(cmdKSearchQuery);
                       setCmdKSearchQuery('');
                       return false;
@@ -521,24 +525,54 @@ function App() {
       }
 
       if (isCmdKMenuOpen) {
+        if (
+          workspaceNotes.length > 1 &&
+          selectedCmdKSuggestionIndex !== null &&
+          e.key === 'Backspace' &&
+          (e.ctrlKey || e.metaKey)
+        ) {
+          const suggestion = cmdKSuggestions[selectedCmdKSuggestionIndex];
+          if (suggestion.type === 'note') {
+            deleteNote(suggestion.note.id);
+            setSelectedCmdKSuggestionIndex(
+              Math.max(selectedCmdKSuggestionIndex - 1, 0),
+            );
+          }
+          return;
+        }
+
+        if (
+          freshlyDeletedNotes.length > 0 &&
+          e.key === 'z' &&
+          (e.ctrlKey || e.metaKey)
+        ) {
+          const topOfStack = freshlyDeletedNotes.pop();
+          if (topOfStack) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            setDatabase(sortNotes([...database, topOfStack]));
+          }
+          return;
+        }
+
         let nextIndex: number | null = null;
         const length = cmdKSuggestions.length;
         if (e.key === 'ArrowUp' || vimUp) {
           e.preventDefault();
-          if (selectedCmdKNoteIndex === null) {
+          if (selectedCmdKSuggestionIndex === null) {
             nextIndex = length - 1;
           } else {
-            nextIndex = (selectedCmdKNoteIndex - 1 + length) % length;
+            nextIndex = (selectedCmdKSuggestionIndex - 1 + length) % length;
           }
-          setSelectedCmdKNoteIndex(nextIndex);
+          setSelectedCmdKSuggestionIndex(nextIndex);
         } else if (e.key === 'ArrowDown' || vimDown) {
           e.preventDefault();
-          if (selectedCmdKNoteIndex === null) {
+          if (selectedCmdKSuggestionIndex === null) {
             nextIndex = 0;
           } else {
-            nextIndex = (selectedCmdKNoteIndex + 1) % length;
+            nextIndex = (selectedCmdKSuggestionIndex + 1) % length;
           }
-          setSelectedCmdKNoteIndex(nextIndex);
+          setSelectedCmdKSuggestionIndex(nextIndex);
         }
 
         if (nextIndex !== null) {
@@ -552,11 +586,11 @@ function App() {
 
         if (e.key === 'Enter') {
           e.preventDefault();
-          const suggestion = cmdKSuggestions[selectedCmdKNoteIndex];
+          const suggestion = cmdKSuggestions[selectedCmdKSuggestionIndex];
           const shouldCloseCmdK = runCmdKSuggestion(suggestion);
           if (shouldCloseCmdK) {
             setIsCmdKMenuOpen(false);
-            setSelectedCmdKNoteIndex(0);
+            setSelectedCmdKSuggestionIndex(0);
           }
           return;
         }
@@ -588,7 +622,7 @@ function App() {
           if (nextWorkspaceIndex !== null) {
             const nextWorkspace = navigableWorkspaces[nextWorkspaceIndex];
             if (nextWorkspace !== currentWorkspace) {
-              setSelectedCmdKNoteIndex(0);
+              setSelectedCmdKSuggestionIndex(0);
               setCurrentWorkspace(nextWorkspace);
             }
           }
@@ -609,7 +643,7 @@ function App() {
       if ((e.key === 'p' || e.key === 'k') && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         textareaDomRef.current?.blur();
-        setSelectedCmdKNoteIndex(0);
+        setSelectedCmdKSuggestionIndex(0);
         setIsCmdKMenuOpen(true);
         setIsHelpMenuOpen(false);
         setCmdKSearchQuery('');
@@ -644,7 +678,7 @@ function App() {
       ) {
         let shouldCloseCmdK: boolean = true;
         if (cmdKSuggestions.length > 0) {
-          const suggestion = cmdKSuggestions[selectedCmdKNoteIndex];
+          const suggestion = cmdKSuggestions[selectedCmdKSuggestionIndex];
           shouldCloseCmdK = runCmdKSuggestion(suggestion);
         }
 
@@ -672,7 +706,7 @@ function App() {
     isCmdKMenuOpen,
     openNewNote,
     openNote,
-    selectedCmdKNoteIndex,
+    selectedCmdKSuggestionIndex,
     textValue,
     isNarrowScreen,
     isHelpMenuOpen,
@@ -999,7 +1033,7 @@ function App() {
                 value={cmdKSearchQuery}
                 onChange={(e) => {
                   setCmdKSearchQuery(e.target.value);
-                  setSelectedCmdKNoteIndex(0);
+                  setSelectedCmdKSuggestionIndex(0);
                 }}
                 style={{
                   padding: '4px',
@@ -1038,7 +1072,7 @@ function App() {
                         }}
                         style={{
                           backgroundColor:
-                            index === selectedCmdKNoteIndex
+                            index === selectedCmdKSuggestionIndex
                               ? 'var(--note-selected-background-color)'
                               : 'var(--note-background-color)',
                         }}
@@ -1066,12 +1100,12 @@ function App() {
                             style={{
                               visibility:
                                 workspaceNotes.length > 1 &&
-                                index === selectedCmdKNoteIndex
+                                index === selectedCmdKSuggestionIndex
                                   ? 'visible'
                                   : 'hidden',
                               pointerEvents:
                                 workspaceNotes.length > 1 &&
-                                index === selectedCmdKNoteIndex
+                                index === selectedCmdKSuggestionIndex
                                   ? 'auto'
                                   : 'none',
                             }}
@@ -1117,7 +1151,7 @@ function App() {
                       onClick={onAction}
                       style={{
                         backgroundColor:
-                          index === selectedCmdKNoteIndex
+                          index === selectedCmdKSuggestionIndex
                             ? 'var(--note-selected-background-color)'
                             : 'var(--note-background-color)',
                       }}
@@ -1145,7 +1179,7 @@ function App() {
                             color: 'var(--on-fill-color)',
                             background: 'var(--keyboard-key-color)',
                             visibility:
-                              index === selectedCmdKNoteIndex
+                              index === selectedCmdKSuggestionIndex
                                 ? 'visible'
                                 : 'hidden',
                           }}
