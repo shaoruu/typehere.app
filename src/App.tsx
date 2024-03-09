@@ -301,7 +301,24 @@ function App() {
     const workspaces = cmdKSearchQuery
       ? workspaceFuse.search(cmdKSearchQuery).map((result) => result.item)
       : [];
+    const currentNote = database.find((note) => note.id === currentNoteId);
+
     const actions: CmdKSuggestion[] = [
+      ...(currentNote?.workspace && !cmdKSearchQuery
+        ? [
+            {
+              type: cmdKSuggestionActionType,
+              title: 'detach workspace',
+              content: `- ${currentNote.workspace}`,
+              onAction() {
+                currentNote.workspace = undefined;
+                setDatabase(sortNotes(database));
+                setCurrentWorkspace(null);
+                return false;
+              },
+            },
+          ]
+        : []),
       ...(cmdKSearchQuery
         ? [
             {
@@ -323,9 +340,6 @@ function App() {
                     title: `move note to ${workspaces[0]}`,
                     content: `→ ${workspaces[0]}`,
                     onAction() {
-                      const currentNote = database.find(
-                        (note) => note.id === currentNoteId,
-                      );
                       if (!currentNote) {
                         console.warn('weird weird weird');
                         return true;
@@ -519,8 +533,10 @@ function App() {
 
       const vimUp = (e.ctrlKey || e.metaKey) && e.key === 'k';
       const vimDown = (e.ctrlKey || e.metaKey) && e.key === 'j';
+      const vimLeft = (e.ctrlKey || e.metaKey) && e.key === 'u';
+      const vimRight = (e.ctrlKey || e.metaKey) && e.key === 'i';
 
-      if (isCmdKMenuOpen && (vimUp || vimDown)) {
+      if (isCmdKMenuOpen && (vimUp || vimDown || vimLeft || vimRight)) {
         setHasVimNavigated(true);
       }
 
@@ -600,20 +616,14 @@ function App() {
         if (currentIndex === -1) {
           console.warn('wtf?'); // not supposed to happen
         } else {
-          if (
-            (e.key === 'u' && (e.ctrlKey || e.metaKey)) ||
-            e.key === 'ArrowLeft'
-          ) {
+          if (vimLeft || e.key === 'ArrowLeft') {
             e.preventDefault();
             nextWorkspaceIndex =
               (currentIndex - 1 + navigableWorkspaces.length) %
               navigableWorkspaces.length;
           }
 
-          if (
-            (e.key === 'i' && (e.ctrlKey || e.metaKey)) ||
-            e.key === 'ArrowRight'
-          ) {
+          if (vimRight || e.key === 'ArrowRight') {
             e.preventDefault();
             nextWorkspaceIndex =
               (currentIndex + 1) % navigableWorkspaces.length;
