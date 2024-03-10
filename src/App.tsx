@@ -334,6 +334,14 @@ function App() {
     }
   }, [currentTheme]);
 
+  const moveNoteToWorkspace = (note: Note, workspace?: string) => {
+    note.workspace = workspace;
+    setDatabase(database);
+    setCurrentWorkspace(workspace ?? null);
+    setSelectedCmdKSuggestionIndex(0);
+    openNote(note.id, false);
+  };
+
   const cmdKSuggestions = useMemo<CmdKSuggestion[]>(() => {
     const notesFuse = new Fuse(workspaceNotes, {
       keys: ['content'],
@@ -383,11 +391,10 @@ function App() {
                         console.warn('weird weird weird');
                         return true;
                       }
-                      currentNote.workspace = workspaces[0] ?? undefined;
-                      setDatabase(database);
-                      setCurrentWorkspace(workspaces[0]);
-                      setSelectedCmdKSuggestionIndex(0);
-                      openNote(currentNote.id, false);
+                      moveNoteToWorkspace(
+                        currentNote,
+                        workspaces[0] ?? undefined,
+                      );
                       setCmdKSearchQuery('');
                       return false;
                     },
@@ -546,6 +553,24 @@ function App() {
     return false;
   };
 
+  const getNextWorkspace = (direction: 'left' | 'right') => {
+    const currentIndex = navigableWorkspaces.indexOf(currentWorkspace);
+    if (currentIndex === -1) {
+      console.warn('wtf?'); // not supposed to happen
+    } else {
+      if (direction === 'left') {
+        return navigableWorkspaces[
+          (currentIndex - 1 + navigableWorkspaces.length) %
+            navigableWorkspaces.length
+        ];
+      } else {
+        return navigableWorkspaces[
+          (currentIndex + 1) % navigableWorkspaces.length
+        ];
+      }
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // NO PRINT
@@ -559,6 +584,10 @@ function App() {
         focus();
         return;
       }
+
+      const currentSuggestion = cmdKSuggestions[selectedCmdKSuggestionIndex];
+      const currentSelectedNote =
+        currentSuggestion.type === 'note' ? currentSuggestion.note : null;
 
       const vimUp = (e.ctrlKey || e.metaKey) && e.key === 'k';
       const vimDown = (e.ctrlKey || e.metaKey) && e.key === 'j';
@@ -640,33 +669,53 @@ function App() {
           return;
         }
 
-        let nextWorkspaceIndex: number | null = null;
-        const currentIndex = navigableWorkspaces.indexOf(currentWorkspace);
-        if (currentIndex === -1) {
-          console.warn('wtf?'); // not supposed to happen
-        } else {
-          if (vimLeft || e.key === 'ArrowLeft') {
-            e.preventDefault();
-            nextWorkspaceIndex =
-              (currentIndex - 1 + navigableWorkspaces.length) %
-              navigableWorkspaces.length;
+        if (vimLeft || (e.key === 'ArrowLeft' && !e.metaKey && !e.ctrlKey)) {
+          e.preventDefault();
+          const nextWorkspace = getNextWorkspace('left');
+          if (nextWorkspace !== currentWorkspace) {
+            setSelectedCmdKSuggestionIndex(0);
+            setCurrentWorkspace(nextWorkspace ?? null);
           }
-
-          if (vimRight || e.key === 'ArrowRight') {
-            e.preventDefault();
-            nextWorkspaceIndex =
-              (currentIndex + 1) % navigableWorkspaces.length;
-          }
-
-          if (nextWorkspaceIndex !== null) {
-            const nextWorkspace = navigableWorkspaces[nextWorkspaceIndex];
-            if (nextWorkspace !== currentWorkspace) {
-              setSelectedCmdKSuggestionIndex(0);
-              setCurrentWorkspace(nextWorkspace);
-            }
-          }
-
           return;
+        }
+
+        if (vimRight || (e.key === 'ArrowRight' && !e.metaKey && !e.ctrlKey)) {
+          e.preventDefault();
+          const nextWorkspace = getNextWorkspace('right');
+          if (nextWorkspace !== currentWorkspace) {
+            setSelectedCmdKSuggestionIndex(0);
+            setCurrentWorkspace(nextWorkspace ?? null);
+          }
+          return;
+        }
+
+        if (currentSelectedNote) {
+          if (e.key === 'ArrowLeft' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            const nextWorkspace = getNextWorkspace('left');
+            console.log(nextWorkspace);
+            if (nextWorkspace !== currentWorkspace) {
+              moveNoteToWorkspace(
+                currentSelectedNote,
+                nextWorkspace ?? undefined,
+              );
+              setSelectedCmdKSuggestionIndex(0);
+            }
+            return;
+          }
+
+          if (e.key === 'ArrowRight' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            const nextWorkspace = getNextWorkspace('right');
+            if (nextWorkspace !== currentWorkspace) {
+              moveNoteToWorkspace(
+                currentSelectedNote,
+                nextWorkspace ?? undefined,
+              );
+              setSelectedCmdKSuggestionIndex(0);
+            }
+            return;
+          }
         }
 
         return;
