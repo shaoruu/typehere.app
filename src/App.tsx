@@ -486,10 +486,10 @@ function App() {
     database,
     currentWorkspace,
     currentNoteId,
-    setDatabase,
-    setCurrentWorkspace,
     openNewNote,
-    openNote,
+    moveNoteToWorkspace,
+    setCurrentWorkspace,
+    setDatabase,
   ]);
 
   const getNoteTitle = (note: Note) => {
@@ -675,6 +675,7 @@ function App() {
           if (nextWorkspace !== currentWorkspace) {
             setSelectedCmdKSuggestionIndex(0);
             setCurrentWorkspace(nextWorkspace ?? null);
+            setCurrentNoteId(''); // hack to force a re-render
           }
           return;
         }
@@ -685,6 +686,7 @@ function App() {
           if (nextWorkspace !== currentWorkspace) {
             setSelectedCmdKSuggestionIndex(0);
             setCurrentWorkspace(nextWorkspace ?? null);
+            setCurrentNoteId('');
           }
           return;
         }
