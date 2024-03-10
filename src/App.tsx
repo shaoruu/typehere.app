@@ -387,7 +387,7 @@ function App() {
                       setDatabase(database);
                       setCurrentWorkspace(workspaces[0]);
                       setSelectedCmdKSuggestionIndex(0);
-                      openNote(currentNote.id);
+                      openNote(currentNote.id, false);
                       setCmdKSearchQuery('');
                       return false;
                     },
