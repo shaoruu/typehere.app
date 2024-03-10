@@ -344,166 +344,40 @@ function App() {
     openNote(note.id, false);
   };
 
-  const cmdKSuggestions = useMemo<CmdKSuggestion[]>(() => {
-    const notesFuse = new Fuse(workspaceNotes, {
-      keys: ['content'],
-      includeScore: true,
-      threshold: 0.3,
-    });
-    const workspaceFuse = new Fuse(availableWorkspaces, {
-      includeScore: true,
-      threshold: 0.05, // lower for workspace match
-    });
-    const notes = cmdKSearchQuery
-      ? notesFuse.search(cmdKSearchQuery).map((result) => result.item)
-      : workspaceNotes;
-    const workspaces = cmdKSearchQuery
-      ? workspaceFuse.search(cmdKSearchQuery).map((result) => result.item)
-      : [];
-    const currentNote = database.find((note) => note.id === currentNoteId);
+  const runCmdKSuggestion = (suggestion?: CmdKSuggestion): boolean => {
+    if (!suggestion) return true;
+    if (suggestion.type === 'note') {
+      openNote(suggestion.note.id);
+      return true;
+    } else if (suggestion.type === 'action') {
+      return suggestion.onAction();
+    }
+    return false;
+  };
 
-    const trimmedCmdKQuery = cmdKSearchQuery.trim().slice(0, 20);
-    const unlinkTitle = 'unlink note';
+  const getNextWorkspace = (direction: 'left' | 'right') => {
+    const currentIndex = navigableWorkspaces.indexOf(currentWorkspace);
+    if (currentIndex === -1) {
+      console.warn('wtf?'); // not supposed to happen
+    } else {
+      if (direction === 'left') {
+        return navigableWorkspaces[
+          (currentIndex - 1 + navigableWorkspaces.length) %
+            navigableWorkspaces.length
+        ];
+      } else {
+        return navigableWorkspaces[
+          (currentIndex + 1) % navigableWorkspaces.length
+        ];
+      }
+    }
+  };
 
-    const actions: CmdKSuggestion[] = [
-      ...(trimmedCmdKQuery
-        ? [
-            {
-              type: cmdKSuggestionActionType,
-              title: 'create new note',
-              content: `"${trimmedCmdKQuery}"`,
-              color: 'green',
-              onAction: () => {
-                openNewNote(trimmedCmdKQuery);
-                setIsCmdKMenuOpen(false);
-                setSelectedCmdKSuggestionIndex(0);
-                setCmdKSearchQuery('');
-                return true;
-              },
-            },
-            ...(workspaces.length > 0
-              ? [
-                  ...workspaces.slice(0, 3).map((workspace) => ({
-                    type: cmdKSuggestionActionType,
-                    title: `open ${workspace}`,
-                    content: `↓[${workspace}]`,
-                    color: 'blue',
-                    onAction() {
-                      openWorkspace(workspace);
-                      return false;
-                    },
-                  })),
-                  {
-                    type: cmdKSuggestionActionType,
-                    title: `move note to ${workspaces[0]}`,
-                    content: `→[${workspaces[0]}]`,
-                    color: 'cyan',
-                    onAction() {
-                      if (!currentNote) {
-                        console.warn('weird weird weird');
-                        return true;
-                      }
-                      moveNoteToWorkspace(
-                        currentNote,
-                        workspaces[0] ?? undefined,
-                      );
-                      setCmdKSearchQuery('');
-                      return false;
-                    },
-                  },
-                ]
-              : []),
-
-            ...(availableWorkspaces.find(
-              (workspace) => workspace === trimmedCmdKQuery,
-            )
-              ? currentWorkspace
-                ? []
-                : []
-              : [
-                  {
-                    type: cmdKSuggestionActionType,
-                    title: 'create workspace',
-                    color: 'red',
-                    content: `+[${trimmedCmdKQuery}]`,
-                    onAction: () => {
-                      openNewNote('', trimmedCmdKQuery, false);
-                      setSelectedCmdKSuggestionIndex(0);
-                      setCurrentWorkspace(trimmedCmdKQuery);
-                      setCmdKSearchQuery('');
-                      return false;
-                    },
-                  },
-                ]),
-            ...(currentWorkspace
-              ? [
-                  {
-                    type: cmdKSuggestionActionType,
-                    title: 'rename workspace',
-                    content: `±[${trimmedCmdKQuery}]`,
-                    color: 'gray',
-                    onAction: () => {
-                      const newDatabase = [...database].map((n) => {
-                        if (n.workspace !== currentWorkspace) {
-                          return n;
-                        }
-                        return {
-                          ...n,
-                          workspace: trimmedCmdKQuery,
-                        };
-                      });
-                      setCurrentWorkspace(trimmedCmdKQuery);
-                      setSelectedCmdKSuggestionIndex(0);
-                      setDatabase(newDatabase);
-                      setCmdKSearchQuery('');
-                      return false;
-                    },
-                  },
-                ]
-              : []),
-          ]
-        : []),
-      ...(currentNote?.workspace &&
-      trimmedCmdKQuery &&
-      unlinkTitle.includes(trimmedCmdKQuery)
-        ? [
-            {
-              type: cmdKSuggestionActionType,
-              title: unlinkTitle,
-              content: `-[${currentNote.workspace}]`,
-              color: 'purple',
-              onAction() {
-                currentNote.workspace = undefined;
-                setDatabase(sortNotes(database));
-                setCurrentWorkspace(null);
-                return false;
-              },
-            },
-          ]
-        : []),
-    ];
-
-    sortNotes(notes);
-
-    return [
-      ...notes.map((note) => ({
-        type: 'note' as const,
-        note,
-      })),
-      ...actions,
-    ];
-  }, [
-    workspaceNotes,
-    availableWorkspaces,
-    cmdKSearchQuery,
-    database,
-    currentWorkspace,
-    currentNoteId,
-    openNewNote,
-    moveNoteToWorkspace,
-    setCurrentWorkspace,
-    setDatabase,
-  ]);
+  const openWorkspace = (workspace: string | null) => {
+    setSelectedCmdKSuggestionIndex(0);
+    setCurrentWorkspace(workspace ?? null);
+    setCurrentNoteId(''); // hack to force a re-render
+  };
 
   const getNoteTitle = (note: Note) => {
     const firstLineBreakIndex = note.content.trim().indexOf('\n');
@@ -555,40 +429,167 @@ function App() {
     }
   };
 
-  const runCmdKSuggestion = (suggestion?: CmdKSuggestion): boolean => {
-    if (!suggestion) return true;
-    if (suggestion.type === 'note') {
-      openNote(suggestion.note.id);
-      return true;
-    } else if (suggestion.type === 'action') {
-      return suggestion.onAction();
-    }
-    return false;
-  };
+  const cmdKSuggestions = useMemo<CmdKSuggestion[]>(() => {
+    const notesFuse = new Fuse(workspaceNotes, {
+      keys: ['content'],
+      includeScore: true,
+      threshold: 0.3,
+    });
+    const workspaceFuse = new Fuse(availableWorkspaces, {
+      includeScore: true,
+      threshold: 0.05, // lower for workspace match
+    });
+    const notes = cmdKSearchQuery
+      ? notesFuse.search(cmdKSearchQuery).map((result) => result.item)
+      : workspaceNotes;
+    const workspaces = cmdKSearchQuery
+      ? workspaceFuse.search(cmdKSearchQuery).map((result) => result.item)
+      : [];
+    const currentNote = database.find((note) => note.id === currentNoteId);
 
-  const getNextWorkspace = (direction: 'left' | 'right') => {
-    const currentIndex = navigableWorkspaces.indexOf(currentWorkspace);
-    if (currentIndex === -1) {
-      console.warn('wtf?'); // not supposed to happen
-    } else {
-      if (direction === 'left') {
-        return navigableWorkspaces[
-          (currentIndex - 1 + navigableWorkspaces.length) %
-            navigableWorkspaces.length
-        ];
-      } else {
-        return navigableWorkspaces[
-          (currentIndex + 1) % navigableWorkspaces.length
-        ];
-      }
-    }
-  };
+    const trimmedCmdKQuery = cmdKSearchQuery.trim().slice(0, 20);
+    const unlinkTitle = 'unlink note';
 
-  const openWorkspace = (workspace: string | null) => {
-    setSelectedCmdKSuggestionIndex(0);
-    setCurrentWorkspace(workspace ?? null);
-    setCurrentNoteId(''); // hack to force a re-render
-  };
+    const actions: CmdKSuggestion[] = [
+      ...(trimmedCmdKQuery
+        ? [
+            {
+              type: cmdKSuggestionActionType,
+              title: 'create new note',
+              content: `"${trimmedCmdKQuery}"`,
+              color: '#4CAF50',
+              onAction: () => {
+                openNewNote(trimmedCmdKQuery);
+                setIsCmdKMenuOpen(false);
+                setSelectedCmdKSuggestionIndex(0);
+                setCmdKSearchQuery('');
+                return true;
+              },
+            },
+            ...(workspaces.length > 0
+              ? [
+                  ...workspaces.slice(0, 3).map((workspace) => ({
+                    type: cmdKSuggestionActionType,
+                    title: `open ${workspace}`,
+                    content: `↓[${workspace}]`,
+                    color: '#2196F3',
+                    onAction() {
+                      openWorkspace(workspace);
+                      return false;
+                    },
+                  })),
+                  {
+                    type: cmdKSuggestionActionType,
+                    title: `move note to ${workspaces[0]}`,
+                    content: `→[${workspaces[0]}]`,
+                    color: '#00BCD4',
+                    onAction() {
+                      if (!currentNote) {
+                        console.warn('weird weird weird');
+                        return true;
+                      }
+                      moveNoteToWorkspace(
+                        currentNote,
+                        workspaces[0] ?? undefined,
+                      );
+                      setCmdKSearchQuery('');
+                      return false;
+                    },
+                  },
+                ]
+              : []),
+
+            ...(availableWorkspaces.find(
+              (workspace) => workspace === trimmedCmdKQuery,
+            )
+              ? currentWorkspace
+                ? []
+                : []
+              : [
+                  {
+                    type: cmdKSuggestionActionType,
+                    title: 'create workspace',
+                    color: '#FF9800',
+                    content: `+[${trimmedCmdKQuery}]`,
+                    onAction: () => {
+                      openNewNote('', trimmedCmdKQuery, false);
+                      setSelectedCmdKSuggestionIndex(0);
+                      setCurrentWorkspace(trimmedCmdKQuery);
+                      setCmdKSearchQuery('');
+                      return false;
+                    },
+                  },
+                ]),
+            ...(currentWorkspace
+              ? [
+                  {
+                    type: cmdKSuggestionActionType,
+                    title: 'rename workspace',
+                    content: `±[${trimmedCmdKQuery}]`,
+                    color: '#9C27B0',
+                    onAction: () => {
+                      const newDatabase = [...database].map((n) => {
+                        if (n.workspace !== currentWorkspace) {
+                          return n;
+                        }
+                        return {
+                          ...n,
+                          workspace: trimmedCmdKQuery,
+                        };
+                      });
+                      setCurrentWorkspace(trimmedCmdKQuery);
+                      setSelectedCmdKSuggestionIndex(0);
+                      setDatabase(newDatabase);
+                      setCmdKSearchQuery('');
+                      return false;
+                    },
+                  },
+                ]
+              : []),
+          ]
+        : []),
+      ...(currentNote?.workspace &&
+      trimmedCmdKQuery &&
+      unlinkTitle.includes(trimmedCmdKQuery)
+        ? [
+            {
+              type: cmdKSuggestionActionType,
+              title: unlinkTitle,
+              content: `-[${currentNote.workspace}]`,
+              color: '#F44336',
+              onAction() {
+                currentNote.workspace = undefined;
+                setDatabase(sortNotes(database));
+                setCurrentWorkspace(null);
+                return false;
+              },
+            },
+          ]
+        : []),
+    ];
+
+    sortNotes(notes);
+
+    return [
+      ...notes.map((note) => ({
+        type: 'note' as const,
+        note,
+      })),
+      ...actions,
+    ];
+  }, [
+    workspaceNotes,
+    availableWorkspaces,
+    cmdKSearchQuery,
+    database,
+    currentWorkspace,
+    currentNoteId,
+    openNewNote,
+    openWorkspace,
+    moveNoteToWorkspace,
+    setCurrentWorkspace,
+    setDatabase,
+  ]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
