@@ -693,7 +693,6 @@ function App() {
           if (e.key === 'ArrowLeft' && (e.ctrlKey || e.metaKey)) {
             e.preventDefault();
             const nextWorkspace = getNextWorkspace('left');
-            console.log(nextWorkspace);
             if (nextWorkspace !== currentWorkspace) {
               moveNoteToWorkspace(
                 currentSelectedNote,
