@@ -452,7 +452,8 @@ function App() {
           ]
         : []),
       ...(currentNote?.workspace &&
-      (!trimmedCmdKQuery || unlinkTitle.includes(trimmedCmdKQuery))
+      trimmedCmdKQuery &&
+      unlinkTitle.includes(trimmedCmdKQuery)
         ? [
             {
               type: cmdKSuggestionActionType,
