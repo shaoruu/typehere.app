@@ -1212,7 +1212,7 @@ function App() {
                             gap: '4px',
                           }}
                         >
-                          {!currentWorkspace && note.workspace && (
+                          {note.workspace && (
                             <>
                               <span
                                 style={{
