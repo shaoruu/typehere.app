@@ -702,34 +702,34 @@ function App() {
       }
     };
 
-    const handleKeyUp = (event: KeyboardEvent) => {
-      if (
-        hasVimNavigated &&
-        isCmdKMenuOpen &&
-        (event.key === 'Meta' || event.key === 'Control')
-      ) {
-        let shouldCloseCmdK: boolean = true;
-        if (cmdKSuggestions.length > 0) {
-          const suggestion = cmdKSuggestions[selectedCmdKSuggestionIndex];
-          shouldCloseCmdK = runCmdKSuggestion(suggestion);
-        }
+    // const handleKeyUp = (event: KeyboardEvent) => {
+    //   if (
+    //     hasVimNavigated &&
+    //     isCmdKMenuOpen &&
+    //     (event.key === 'Meta' || event.key === 'Control')
+    //   ) {
+    //     let shouldCloseCmdK: boolean = true;
+    //     if (cmdKSuggestions.length > 0) {
+    //       const suggestion = cmdKSuggestions[selectedCmdKSuggestionIndex];
+    //       shouldCloseCmdK = runCmdKSuggestion(suggestion);
+    //     }
 
-        if (shouldCloseCmdK) {
-          setIsCmdKMenuOpen(false);
-        }
+    //     if (shouldCloseCmdK) {
+    //       setIsCmdKMenuOpen(false);
+    //     }
 
-        setHasVimNavigated(false);
+    //     setHasVimNavigated(false);
 
-        focus();
-      }
-    };
+    //     focus();
+    //   }
+    // };
 
     window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    // window.addEventListener('keyup', handleKeyUp);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      // window.removeEventListener('keyup', handleKeyUp);
     };
   }, [
     database,
@@ -750,6 +750,10 @@ function App() {
     navigableWorkspaces,
     runCmdKSuggestion,
     setCurrentWorkspace,
+    workspaceNotes.length,
+    freshlyDeletedNotes,
+    deleteNote,
+    setDatabase,
   ]);
 
   useEffect(() => {
