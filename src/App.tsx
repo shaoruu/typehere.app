@@ -249,7 +249,7 @@ function App() {
     }
   };
 
-  const openNote = (noteId: string) => {
+  const openNote = (noteId: string, shouldFocus: boolean = true) => {
     if (!noteId || !database.find((n) => n.id === noteId)) {
       return;
     }
@@ -264,21 +264,24 @@ function App() {
 
     setDatabase(database);
 
-    setTimeout(() => {
-      focus();
+    if (shouldFocus) {
+      setTimeout(() => {
+        focus();
 
-      if (aceEditorRef.current) {
-        const editor = aceEditorRef.current.editor;
-        editor.getSession().getUndoManager().reset();
-        editor.clearSelection();
-        editor.moveCursorTo(0, 0);
-      }
-    }, 10);
+        if (aceEditorRef.current) {
+          const editor = aceEditorRef.current.editor;
+          editor.getSession().getUndoManager().reset();
+          editor.clearSelection();
+          editor.moveCursorTo(0, 0);
+        }
+      }, 10);
+    }
   };
 
   const openNewNote = (
     defaultContent: string = '',
     defaultWorkspace: string = '',
+    shouldFocus = true,
   ) => {
     const newNote: Note = {
       id: getRandomId(),
@@ -290,7 +293,7 @@ function App() {
     setDatabase([...database, newNote]);
     setCurrentNoteId(newNote.id);
     setTextValue('');
-    openNote(newNote.id);
+    openNote(newNote.id, shouldFocus);
 
     return newNote;
   };
@@ -405,7 +408,7 @@ function App() {
                     color: 'red',
                     content: `+[${trimmedCmdKQuery}]`,
                     onAction: () => {
-                      openNewNote('', trimmedCmdKQuery);
+                      openNewNote('', trimmedCmdKQuery, false);
                       setSelectedCmdKSuggestionIndex(0);
                       setCurrentWorkspace(trimmedCmdKQuery);
                       setCmdKSearchQuery('');
@@ -413,28 +416,32 @@ function App() {
                     },
                   },
                 ]),
-            {
-              type: cmdKSuggestionActionType,
-              title: 'rename workspace',
-              content: `±[${trimmedCmdKQuery}]`,
-              color: 'gray',
-              onAction: () => {
-                const newDatabase = [...database].map((n) => {
-                  if (n.workspace !== currentWorkspace) {
-                    return n;
-                  }
-                  return {
-                    ...n,
-                    workspace: trimmedCmdKQuery,
-                  };
-                });
-                setCurrentWorkspace(trimmedCmdKQuery);
-                setSelectedCmdKSuggestionIndex(0);
-                setDatabase(newDatabase);
-                setCmdKSearchQuery('');
-                return false;
-              },
-            },
+            ...(currentWorkspace
+              ? [
+                  {
+                    type: cmdKSuggestionActionType,
+                    title: 'rename workspace',
+                    content: `±[${trimmedCmdKQuery}]`,
+                    color: 'gray',
+                    onAction: () => {
+                      const newDatabase = [...database].map((n) => {
+                        if (n.workspace !== currentWorkspace) {
+                          return n;
+                        }
+                        return {
+                          ...n,
+                          workspace: trimmedCmdKQuery,
+                        };
+                      });
+                      setCurrentWorkspace(trimmedCmdKQuery);
+                      setSelectedCmdKSuggestionIndex(0);
+                      setDatabase(newDatabase);
+                      setCmdKSearchQuery('');
+                      return false;
+                    },
+                  },
+                ]
+              : []),
           ]
         : []),
       ...(currentNote?.workspace &&
