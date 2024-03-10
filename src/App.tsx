@@ -186,8 +186,8 @@ function App() {
 
   const workspaceNotes = useMemo(() => {
     return currentWorkspace === null
-      ? database
-      : database.filter((n) => n.workspace === currentWorkspace);
+      ? sortNotes(database)
+      : sortNotes(database.filter((n) => n.workspace === currentWorkspace));
   }, [database, currentWorkspace]);
 
   const availableWorkspaces = useMemo(() => {
