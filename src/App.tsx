@@ -383,6 +383,16 @@ function App() {
             },
             ...(workspaces.length > 0
               ? [
+                  ...workspaces.slice(0, 3).map((workspace) => ({
+                    type: cmdKSuggestionActionType,
+                    title: `open ${workspace}`,
+                    content: `↓[${workspace}]`,
+                    color: 'blue',
+                    onAction() {
+                      openWorkspace(workspace);
+                      return false;
+                    },
+                  })),
                   {
                     type: cmdKSuggestionActionType,
                     title: `move note to ${workspaces[0]}`,
@@ -574,6 +584,12 @@ function App() {
     }
   };
 
+  const openWorkspace = (workspace: string | null) => {
+    setSelectedCmdKSuggestionIndex(0);
+    setCurrentWorkspace(workspace ?? null);
+    setCurrentNoteId(''); // hack to force a re-render
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // NO PRINT
@@ -672,26 +688,18 @@ function App() {
           return;
         }
 
-        if (vimLeft || (e.key === 'ArrowLeft' && !e.metaKey && !e.ctrlKey)) {
+        const direction =
+          vimLeft || (e.key === 'ArrowLeft' && !e.metaKey && !e.ctrlKey)
+            ? 'left'
+            : vimRight || (e.key === 'ArrowRight' && !e.metaKey && !e.ctrlKey)
+            ? 'right'
+            : null;
+        if (direction) {
           e.preventDefault();
-          const nextWorkspace = getNextWorkspace('left');
+          const nextWorkspace = getNextWorkspace(direction);
           if (nextWorkspace !== currentWorkspace) {
-            setSelectedCmdKSuggestionIndex(0);
-            setCurrentWorkspace(nextWorkspace ?? null);
-            setCurrentNoteId(''); // hack to force a re-render
+            openWorkspace(nextWorkspace ?? null);
           }
-          return;
-        }
-
-        if (vimRight || (e.key === 'ArrowRight' && !e.metaKey && !e.ctrlKey)) {
-          e.preventDefault();
-          const nextWorkspace = getNextWorkspace('right');
-          if (nextWorkspace !== currentWorkspace) {
-            setSelectedCmdKSuggestionIndex(0);
-            setCurrentWorkspace(nextWorkspace ?? null);
-            setCurrentNoteId('');
-          }
-          return;
         }
 
         if (currentSelectedNote) {
@@ -820,6 +828,7 @@ function App() {
     getNextWorkspace,
     setCurrentNoteId,
     moveNoteToWorkspace,
+    openWorkspace,
   ]);
 
   useEffect(() => {
