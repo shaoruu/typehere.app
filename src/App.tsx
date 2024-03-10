@@ -159,6 +159,7 @@ const sortNotes = (notes: Note[]) => {
 
 function App() {
   const textareaDomRef = useRef<HTMLTextAreaElement>(null);
+  const cmdKInputDomRef = useRef<HTMLInputElement>(null);
 
   const [database, setDatabase] = usePersistentState<Note[]>(
     'typehere-database',
@@ -721,6 +722,9 @@ function App() {
           }
         }
 
+        // otherwise, just focus on the cmdk search and let the user type
+        cmdKInputDomRef.current?.focus();
+
         return;
       }
 
@@ -1140,6 +1144,7 @@ function App() {
             >
               <input
                 autoFocus
+                ref={cmdKInputDomRef}
                 placeholder="Search for note"
                 value={cmdKSearchQuery}
                 onChange={(e) => {
