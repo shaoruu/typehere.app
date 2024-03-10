@@ -813,6 +813,9 @@ function App() {
     freshlyDeletedNotes,
     deleteNote,
     setDatabase,
+    getNextWorkspace,
+    setCurrentNoteId,
+    moveNoteToWorkspace,
   ]);
 
   useEffect(() => {
@@ -966,9 +969,22 @@ function App() {
                   <div className="help-menu-shortcuts-item">
                     <div className="help-menu-shortcuts-keys">
                       <kbd>{cmdKey}</kbd>
-                      <kbd>i</kbd>
+                      <kbd>e</kbd>
                     </div>
                     <span>Toggle narrow screen</span>
+                  </div>
+                  <div className="help-menu-shortcuts-item">
+                    <div className="help-menu-shortcuts-keys">
+                      <kbd>←/→</kbd>
+                    </div>
+                    <span>Switch workspaces</span>
+                  </div>
+                  <div className="help-menu-shortcuts-item">
+                    <div className="help-menu-shortcuts-keys">
+                      <kbd>{cmdKey}</kbd>
+                      <kbd>←/→</kbd>
+                    </div>
+                    <span>Move note between workspaces</span>
                   </div>
                 </div>
                 <button onClick={() => setIsHelpMenuOpen(false)}>close</button>
