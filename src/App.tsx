@@ -1164,10 +1164,8 @@ function App() {
                             gap: '4px',
                           }}
                         >
-                          <span>{timestamp}</span>
                           {!currentWorkspace && note.workspace && (
                             <>
-                              <span>•</span>
                               <span
                                 style={{
                                   overflow: 'hidden',
@@ -1178,8 +1176,10 @@ function App() {
                               >
                                 {note.workspace}
                               </span>
+                              <span>•</span>
                             </>
                           )}
+                          <span>{timestamp}</span>
                         </div>
                       </div>
                     );
