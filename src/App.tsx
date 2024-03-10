@@ -5,6 +5,7 @@ import { EnhancedTextarea } from './EnhancedTextarea';
 import LZString from 'lz-string';
 import Fuse from 'fuse.js';
 import AceEditor from 'react-ace';
+// import { LuLock, LuUnlock } from 'react-icons/lu';
 
 // Updated textsToReplace with additional text replacements for enhanced text processing
 const textsToReplace: [string | RegExp, string][] = [
