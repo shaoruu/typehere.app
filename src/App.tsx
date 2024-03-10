@@ -475,6 +475,7 @@ function App() {
                     color: '#2196F3',
                     onAction() {
                       openWorkspace(workspace);
+                      setCmdKSearchQuery('');
                       return false;
                     },
                   })),
