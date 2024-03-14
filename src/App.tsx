@@ -606,6 +606,12 @@ function App() {
         return;
       }
 
+      if (e.key === 'e' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setIsNarrowScreen(!isNarrowScreen);
+        return;
+      }
+
       const currentSuggestion = cmdKSuggestions[selectedCmdKSuggestionIndex];
       const currentSelectedNote =
         currentSuggestion.type === 'note' ? currentSuggestion.note : null;
@@ -679,7 +685,7 @@ function App() {
           return;
         }
 
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' || (e.key === 'b' && (e.ctrlKey || e.metaKey))) {
           e.preventDefault();
           const suggestion = cmdKSuggestions[selectedCmdKSuggestionIndex];
           const shouldCloseCmdK = runCmdKSuggestion(suggestion);
