@@ -724,7 +724,6 @@ function App() {
         }
 
         if (currentSelectedNote) {
-          // NO PRINT
           if (e.key === 'h' && (e.metaKey || e.ctrlKey)) {
             e.preventDefault();
             e.stopImmediatePropagation();
