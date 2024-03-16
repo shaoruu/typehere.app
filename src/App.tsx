@@ -729,6 +729,8 @@ function App() {
             e.preventDefault();
             e.stopImmediatePropagation();
             pinNote(currentSelectedNote, !currentSelectedNote.isPinned);
+            openNote(currentSelectedNote.id, false);
+            setSelectedCmdKSuggestionIndex(0);
             return;
           }
 
@@ -1255,7 +1257,7 @@ function App() {
                               <FaMapPin
                                 style={{
                                   marginRight: '4px',
-                                  color: 'var(--dark-color)',
+                                  color: 'var(--pin-color)',
                                   fontSize: '0.8rem',
                                 }}
                               />
