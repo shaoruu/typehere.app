@@ -5,6 +5,7 @@ import { EnhancedTextarea } from './EnhancedTextarea';
 import LZString from 'lz-string';
 import Fuse from 'fuse.js';
 import AceEditor from 'react-ace';
+import { FaMapPin } from 'react-icons/fa';
 // import { LuLock, LuUnlock } from 'react-icons/lu';
 
 // Updated textsToReplace with additional text replacements for enhanced text processing
@@ -62,6 +63,7 @@ type Note = {
   id: string;
   content: string;
   updatedAt: string;
+  isPinned: boolean;
   workspace?: string;
 };
 
@@ -86,6 +88,7 @@ const freshDatabase = [
     id: getRandomId(),
     content: '',
     updatedAt: new Date().toISOString(),
+    isPinned: false,
   },
 ];
 
@@ -189,7 +192,11 @@ function App() {
   const workspaceNotes = useMemo(() => {
     return currentWorkspace === null
       ? sortNotes(database)
-      : sortNotes(database.filter((n) => n.workspace === currentWorkspace));
+      : sortNotes(
+          database.filter(
+            (n) => n.workspace === currentWorkspace || n.isPinned,
+          ),
+        );
   }, [database, currentWorkspace]);
 
   const availableWorkspaces = useMemo(() => {
@@ -290,6 +297,7 @@ function App() {
       content: defaultContent,
       updatedAt: new Date().toISOString(),
       workspace: (defaultWorkspace || currentWorkspace) ?? undefined,
+      isPinned: false,
     };
 
     setDatabase([...database, newNote]);
@@ -427,6 +435,11 @@ function App() {
       newDatabase.splice(noteIndex, 1, updatedNote);
       setDatabase(newDatabase);
     }
+  };
+
+  const pinNote = (note: Note, isPinned: boolean = true) => {
+    note.isPinned = isPinned;
+    setDatabase(sortNotes([...database.filter((n) => n.id !== note.id), note]));
   };
 
   const cmdKSuggestions = useMemo<CmdKSuggestion[]>(() => {
@@ -711,6 +724,14 @@ function App() {
         }
 
         if (currentSelectedNote) {
+          // NO PRINT
+          if (e.key === 'h' && (e.metaKey || e.ctrlKey)) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            pinNote(currentSelectedNote, !currentSelectedNote.isPinned);
+            return;
+          }
+
           if (e.key === 'ArrowLeft' && (e.ctrlKey || e.metaKey)) {
             e.preventDefault();
             const nextWorkspace = getNextWorkspace('left');
@@ -837,6 +858,7 @@ function App() {
     setCurrentNoteId,
     moveNoteToWorkspace,
     openWorkspace,
+    pinNote,
   ]);
 
   useEffect(() => {
@@ -1006,6 +1028,13 @@ function App() {
                       <kbd>←/→</kbd>
                     </div>
                     <span>Move note between workspaces</span>
+                  </div>
+                  <div className="help-menu-shortcuts-item">
+                    <div className="help-menu-shortcuts-keys">
+                      <kbd>{cmdKey}</kbd>
+                      <kbd>h</kbd>
+                    </div>
+                    <span>Pin note to all workspaces</span>
                   </div>
                 </div>
                 <button onClick={() => setIsHelpMenuOpen(false)}>close</button>
@@ -1222,6 +1251,15 @@ function App() {
                                 : 'var(--untitled-note-title-color)',
                             }}
                           >
+                            {note.isPinned && (
+                              <FaMapPin
+                                style={{
+                                  marginRight: '4px',
+                                  color: 'var(--dark-color)',
+                                  fontSize: '0.8rem',
+                                }}
+                              />
+                            )}
                             {title || 'New Note'}
                           </div>
                           <button
