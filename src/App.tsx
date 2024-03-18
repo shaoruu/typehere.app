@@ -899,6 +899,7 @@ function App() {
             padding: '2rem',
             width: '100%',
             paddingRight: '0',
+            paddingBottom: '0',
             height: '100vh',
           }}
         >
