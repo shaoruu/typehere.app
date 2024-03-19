@@ -21,7 +21,11 @@ const textsToReplace: [string | RegExp, string][] = [
   ['+-', '±'],
 ];
 
-function usePersistentState<T>(storageKey: string, defaultValue?: T) {
+function usePersistentState<T>(
+  storageKey: string,
+  defaultValue?: T,
+  shouldListenToChange = true,
+) {
   const [data, setData] = useState<T>(() => {
     const localStorageData = localStorage.getItem(storageKey);
 
@@ -34,6 +38,8 @@ function usePersistentState<T>(storageKey: string, defaultValue?: T) {
   });
 
   useEffect(() => {
+    if (!shouldListenToChange) return;
+
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === storageKey) {
         setData(event.newValue ? JSON.parse(event.newValue) : defaultValue);
@@ -42,7 +48,7 @@ function usePersistentState<T>(storageKey: string, defaultValue?: T) {
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [storageKey, defaultValue]);
+  }, [storageKey, defaultValue, shouldListenToChange]);
 
   return [
     data,
@@ -173,10 +179,11 @@ function App() {
 
   const [currentWorkspace, setCurrentWorkspace] = usePersistentState<
     string | null
-  >('typehere-currentWorkspace', null);
+  >('typehere-currentWorkspace', null, false);
   const [currentNoteId, setCurrentNoteId] = usePersistentState<string>(
     'typehere-currentNoteId',
     freshDatabase[0].id,
+    false,
   );
   const [moreMenuPosition, setMoreMenuPosition] = useState<{
     x: number;
