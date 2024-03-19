@@ -467,19 +467,23 @@ function App() {
       : [];
     const currentNote = database.find((note) => note.id === currentNoteId);
 
-    const trimmedCmdKQuery = cmdKSearchQuery.trim().slice(0, 20);
     const unlinkTitle = 'unlink note';
+    const shouldTrimQuery = cmdKSearchQuery.length > 20;
+    const trimmedQuery = cmdKSearchQuery.slice(0, 20);
+    const trimmedContent = shouldTrimQuery
+      ? trimmedQuery + '...'
+      : cmdKSearchQuery;
 
     const actions: CmdKSuggestion[] = [
-      ...(trimmedCmdKQuery
+      ...(cmdKSearchQuery
         ? [
             {
               type: cmdKSuggestionActionType,
               title: 'create new note',
-              content: `"${trimmedCmdKQuery}"`,
+              content: `"${trimmedContent}"`,
               color: '#4CAF50',
               onAction: () => {
-                openNewNote(trimmedCmdKQuery);
+                openNewNote(cmdKSearchQuery);
                 setIsCmdKMenuOpen(false);
                 setSelectedCmdKSuggestionIndex(0);
                 setCmdKSearchQuery('');
@@ -521,7 +525,7 @@ function App() {
               : []),
 
             ...(availableWorkspaces.find(
-              (workspace) => workspace === trimmedCmdKQuery,
+              (workspace) => workspace === cmdKSearchQuery,
             )
               ? currentWorkspace
                 ? []
@@ -531,11 +535,11 @@ function App() {
                     type: cmdKSuggestionActionType,
                     title: 'create workspace',
                     color: '#FF9800',
-                    content: `+[${trimmedCmdKQuery}]`,
+                    content: `+[${trimmedContent}]`,
                     onAction: () => {
-                      openNewNote('', trimmedCmdKQuery, false);
+                      openNewNote('', cmdKSearchQuery, false);
                       setSelectedCmdKSuggestionIndex(0);
-                      setCurrentWorkspace(trimmedCmdKQuery);
+                      setCurrentWorkspace(cmdKSearchQuery);
                       setCmdKSearchQuery('');
                       return false;
                     },
@@ -546,7 +550,7 @@ function App() {
                   {
                     type: cmdKSuggestionActionType,
                     title: 'rename workspace',
-                    content: `±[${trimmedCmdKQuery}]`,
+                    content: `±[${trimmedContent}]`,
                     color: '#9C27B0',
                     onAction: () => {
                       const newDatabase = [...database].map((n) => {
@@ -555,10 +559,10 @@ function App() {
                         }
                         return {
                           ...n,
-                          workspace: trimmedCmdKQuery,
+                          workspace: cmdKSearchQuery,
                         };
                       });
-                      setCurrentWorkspace(trimmedCmdKQuery);
+                      setCurrentWorkspace(cmdKSearchQuery);
                       setSelectedCmdKSuggestionIndex(0);
                       setDatabase(newDatabase);
                       setCmdKSearchQuery('');
@@ -570,8 +574,8 @@ function App() {
           ]
         : []),
       ...(currentNote?.workspace &&
-      trimmedCmdKQuery &&
-      unlinkTitle.includes(trimmedCmdKQuery)
+      cmdKSearchQuery &&
+      unlinkTitle.includes(cmdKSearchQuery)
         ? [
             {
               type: cmdKSuggestionActionType,
