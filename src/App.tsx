@@ -477,6 +477,22 @@ function App() {
     const actions: CmdKSuggestion[] = [
       ...(cmdKSearchQuery
         ? [
+            ...(workspaces.length > 0
+              ? [
+                  ...workspaces.slice(0, 3).map((workspace) => ({
+                    type: cmdKSuggestionActionType,
+                    title: `go to ${workspace}`,
+                    content: `↓[${workspace}]`,
+                    color: '#2196F3',
+                    onAction() {
+                      openWorkspace(workspace);
+                      setCmdKSearchQuery('');
+                      return false;
+                    },
+                  })),
+                ]
+              : []),
+
             {
               type: cmdKSuggestionActionType,
               title: 'create new note',
@@ -492,17 +508,6 @@ function App() {
             },
             ...(workspaces.length > 0
               ? [
-                  ...workspaces.slice(0, 3).map((workspace) => ({
-                    type: cmdKSuggestionActionType,
-                    title: `go to ${workspace}`,
-                    content: `↓[${workspace}]`,
-                    color: '#2196F3',
-                    onAction() {
-                      openWorkspace(workspace);
-                      setCmdKSearchQuery('');
-                      return false;
-                    },
-                  })),
                   {
                     type: cmdKSuggestionActionType,
                     title: `move note to ${workspaces[0]}`,
