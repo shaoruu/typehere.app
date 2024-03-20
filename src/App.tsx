@@ -494,7 +494,7 @@ function App() {
               ? [
                   ...workspaces.slice(0, 3).map((workspace) => ({
                     type: cmdKSuggestionActionType,
-                    title: `open ${workspace}`,
+                    title: `go to ${workspace}`,
                     content: `↓[${workspace}]`,
                     color: '#2196F3',
                     onAction() {
