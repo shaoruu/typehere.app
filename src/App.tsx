@@ -967,6 +967,16 @@ function App() {
         />
       )}
       <div id="controls">
+        {currentWorkspace && (
+          <div
+            style={{
+              color: 'var(--dark-color)',
+              opacity: 0.5,
+            }}
+          >
+            [{currentWorkspace}]
+          </div>
+        )}
         <button
           onClick={() => {
             setIsHelpMenuOpen(true);

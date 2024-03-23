@@ -129,6 +129,7 @@ input {
 #controls {
   display: flex;
   gap: 6px;
+  align-items: center;
   position: fixed;
   bottom: 0px;
   right: 0px;
