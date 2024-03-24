@@ -278,7 +278,7 @@ function App() {
       n.updatedAt = new Date().toISOString();
     }
 
-    if (n?.workspace !== currentWorkspace) {
+    if (n && n.workspace !== currentWorkspace) {
       setCurrentWorkspace(n.workspace ?? null);
     }
 
