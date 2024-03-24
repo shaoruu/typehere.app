@@ -1,6 +1,6 @@
 # TypeHere: A Powerful Textarea
 
-A textarea with vim
+A textarea (with vim)
 
 <img width="2560" alt="image" src="https://github.com/shaoruu/typehere.app/assets/35216312/4fdcbb50-6d84-48f4-88d8-07e5f3547a92">
 
