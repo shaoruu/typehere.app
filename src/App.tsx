@@ -1014,13 +1014,6 @@ function App() {
                   <div className="help-menu-shortcuts-item">
                     <div className="help-menu-shortcuts-keys">
                       <kbd>{cmdKey}</kbd>
-                      <kbd>m/slash</kbd>
-                    </div>
-                    <span>Open notes list</span>
-                  </div>
-                  <div className="help-menu-shortcuts-item">
-                    <div className="help-menu-shortcuts-keys">
-                      <kbd>{cmdKey}</kbd>
                       <kbd>⇧</kbd>
                       <kbd>⏎</kbd>
                     </div>
