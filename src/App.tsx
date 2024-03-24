@@ -278,6 +278,10 @@ function App() {
       n.updatedAt = new Date().toISOString();
     }
 
+    if (n?.workspace !== currentWorkspace) {
+      setCurrentWorkspace(n.workspace ?? null);
+    }
+
     setDatabase(database);
 
     if (shouldFocus) {
@@ -450,11 +454,16 @@ function App() {
   };
 
   const cmdKSuggestions = useMemo<CmdKSuggestion[]>(() => {
-    const notesFuse = new Fuse(workspaceNotes, {
-      keys: ['content'],
-      includeScore: true,
-      threshold: 0.3,
-    });
+    const shouldSearchAllNotes = cmdKSearchQuery.startsWith('@');
+
+    const notesFuse = new Fuse(
+      shouldSearchAllNotes ? database : workspaceNotes,
+      {
+        keys: ['content'],
+        includeScore: true,
+        threshold: 0.3,
+      },
+    );
     const workspaceFuse = new Fuse(availableWorkspaces, {
       includeScore: true,
       threshold: 0.05, // lower for workspace match
