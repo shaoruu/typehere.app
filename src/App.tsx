@@ -914,6 +914,7 @@ function App() {
       editor.commands.removeCommand('find');
       editor.getSession().setOption('indentedSoftWrap', false);
       editor.resize();
+      editor.renderer.setScrollMargin(0, 48, 0, 0);
     }
   }, [isUsingVim]);
 
