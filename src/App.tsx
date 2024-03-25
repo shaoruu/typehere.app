@@ -454,7 +454,13 @@ function App() {
   };
 
   const cmdKSuggestions = useMemo<CmdKSuggestion[]>(() => {
-    const shouldSearchAllNotes = cmdKSearchQuery.startsWith('@');
+    const searchAllNotesKeys = ['@', '>'];
+    const shouldSearchAllNotes = searchAllNotesKeys.some((key) =>
+      cmdKSearchQuery.startsWith(key),
+    );
+    const processedCmdKSearchQuery = shouldSearchAllNotes
+      ? cmdKSearchQuery.slice(1)
+      : cmdKSearchQuery;
 
     const notesFuse = new Fuse(
       shouldSearchAllNotes ? database : workspaceNotes,
@@ -468,23 +474,25 @@ function App() {
       includeScore: true,
       threshold: 0.05, // lower for workspace match
     });
-    const notes = cmdKSearchQuery
-      ? notesFuse.search(cmdKSearchQuery).map((result) => result.item)
+    const notes = processedCmdKSearchQuery
+      ? notesFuse.search(processedCmdKSearchQuery).map((result) => result.item)
       : workspaceNotes;
-    const workspaces = cmdKSearchQuery
-      ? workspaceFuse.search(cmdKSearchQuery).map((result) => result.item)
+    const workspaces = processedCmdKSearchQuery
+      ? workspaceFuse
+          .search(processedCmdKSearchQuery)
+          .map((result) => result.item)
       : [];
     const currentNote = database.find((note) => note.id === currentNoteId);
 
     const unlinkTitle = 'unlink note';
-    const shouldTrimQuery = cmdKSearchQuery.length > 20;
-    const trimmedQuery = cmdKSearchQuery.slice(0, 20);
+    const shouldTrimQuery = processedCmdKSearchQuery.length > 20;
+    const trimmedQuery = processedCmdKSearchQuery.slice(0, 20);
     const trimmedContent = shouldTrimQuery
       ? trimmedQuery + '...'
-      : cmdKSearchQuery;
+      : processedCmdKSearchQuery;
 
     const actions: CmdKSuggestion[] = [
-      ...(cmdKSearchQuery
+      ...(processedCmdKSearchQuery
         ? [
             ...(workspaces.length > 0
               ? [
@@ -508,7 +516,7 @@ function App() {
               content: `"${trimmedContent}"`,
               color: '#4CAF50',
               onAction: () => {
-                openNewNote(cmdKSearchQuery);
+                openNewNote(processedCmdKSearchQuery);
                 setIsCmdKMenuOpen(false);
                 setSelectedCmdKSuggestionIndex(0);
                 setCmdKSearchQuery('');
@@ -539,7 +547,7 @@ function App() {
               : []),
 
             ...(availableWorkspaces.find(
-              (workspace) => workspace === cmdKSearchQuery,
+              (workspace) => workspace === processedCmdKSearchQuery,
             )
               ? currentWorkspace
                 ? []
@@ -551,9 +559,9 @@ function App() {
                     color: '#FF9800',
                     content: `+[${trimmedContent}]`,
                     onAction: () => {
-                      openNewNote('', cmdKSearchQuery, false);
+                      openNewNote('', processedCmdKSearchQuery, false);
                       setSelectedCmdKSuggestionIndex(0);
-                      setCurrentWorkspace(cmdKSearchQuery);
+                      setCurrentWorkspace(processedCmdKSearchQuery);
                       setCmdKSearchQuery('');
                       return false;
                     },
@@ -573,10 +581,10 @@ function App() {
                         }
                         return {
                           ...n,
-                          workspace: cmdKSearchQuery,
+                          workspace: processedCmdKSearchQuery,
                         };
                       });
-                      setCurrentWorkspace(cmdKSearchQuery);
+                      setCurrentWorkspace(processedCmdKSearchQuery);
                       setSelectedCmdKSuggestionIndex(0);
                       setDatabase(newDatabase);
                       setCmdKSearchQuery('');
@@ -588,8 +596,8 @@ function App() {
           ]
         : []),
       ...(currentNote?.workspace &&
-      cmdKSearchQuery &&
-      unlinkTitle.includes(cmdKSearchQuery)
+      processedCmdKSearchQuery &&
+      unlinkTitle.includes(processedCmdKSearchQuery)
         ? [
             {
               type: cmdKSuggestionActionType,
