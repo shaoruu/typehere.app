@@ -8,7 +8,6 @@ import 'ace-builds/src-noconflict/theme-clouds';
 import 'ace-builds/src-noconflict/theme-clouds_midnight';
 import 'ace-builds/src-noconflict/keybinding-vim';
 import 'ace-builds/src-noconflict/ext-elastic_tabstops_lite';
-import 'ace-builds/src-noconflict/mode-markdown';
 
 import { registerSW } from 'virtual:pwa-register';
 
