@@ -812,7 +812,12 @@ function App() {
         setSelectedCmdKSuggestionIndex(0);
         setIsCmdKMenuOpen(true);
         setIsHelpMenuOpen(false);
-        setCmdKSearchQuery('');
+
+        if (e.shiftKey) {
+          setCmdKSearchQuery('@');
+        } else {
+          setCmdKSearchQuery('');
+        }
         return;
       }
 
