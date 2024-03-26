@@ -465,9 +465,9 @@ function App() {
     const notesFuse = new Fuse(
       shouldSearchAllNotes ? database : workspaceNotes,
       {
-        keys: ['content'],
+        keys: ['content', 'workspace'],
         includeScore: true,
-        threshold: 0.3,
+        threshold: 0.5,
       },
     );
     const workspaceFuse = new Fuse(availableWorkspaces, {
