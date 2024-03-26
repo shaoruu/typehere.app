@@ -672,21 +672,21 @@ function App() {
       }
 
       if (isCmdKMenuOpen) {
-        if (
-          workspaceNotes.length > 1 &&
-          selectedCmdKSuggestionIndex !== null &&
-          e.key === 'Backspace' &&
-          (e.ctrlKey || e.metaKey)
-        ) {
-          const suggestion = cmdKSuggestions[selectedCmdKSuggestionIndex];
-          if (suggestion.type === 'note') {
-            deleteNote(suggestion.note.id);
-            setSelectedCmdKSuggestionIndex(
-              Math.max(selectedCmdKSuggestionIndex - 1, 0),
-            );
-          }
-          return;
-        }
+        // if (
+        //   workspaceNotes.length > 1 &&
+        //   selectedCmdKSuggestionIndex !== null &&
+        //   e.key === 'Backspace' &&
+        //   (e.ctrlKey || e.metaKey)
+        // ) {
+        //   const suggestion = cmdKSuggestions[selectedCmdKSuggestionIndex];
+        //   if (suggestion.type === 'note') {
+        //     deleteNote(suggestion.note.id);
+        //     setSelectedCmdKSuggestionIndex(
+        //       Math.max(selectedCmdKSuggestionIndex - 1, 0),
+        //     );
+        //   }
+        //   return;
+        // }
 
         if (
           freshlyDeletedNotes.length > 0 &&
