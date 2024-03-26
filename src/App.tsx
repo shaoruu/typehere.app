@@ -467,7 +467,7 @@ function App() {
       {
         keys: ['content', 'workspace'],
         includeScore: true,
-        threshold: 0.5,
+        threshold: 0.2,
       },
     );
     const workspaceFuse = new Fuse(availableWorkspaces, {
