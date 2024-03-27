@@ -912,7 +912,7 @@ function App() {
     if (isUsingVim && aceEditorRef.current) {
       const editor = aceEditorRef.current.editor;
       editor.commands.removeCommand('find');
-      // editor.getSession().setOption('indentedSoftWrap', false);
+      editor.getSession().setOption('indentedSoftWrap', false);
       editor.resize();
       editor.renderer.setScrollMargin(0, 48, 0, 0);
     }
