@@ -757,7 +757,7 @@ function App() {
         }
 
         if (currentSelectedNote) {
-          if (e.key === 'h' && (e.metaKey || e.ctrlKey)) {
+          if ((e.key === 'h' || e.key === 'g') && (e.metaKey || e.ctrlKey)) {
             e.preventDefault();
             e.stopImmediatePropagation();
             pinNote(currentSelectedNote, !currentSelectedNote.isPinned);
