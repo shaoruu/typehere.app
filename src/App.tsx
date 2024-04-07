@@ -257,6 +257,7 @@ function App() {
     const deletedNote = database.find((note) => note.id === noteId);
     if (!deletedNote) return;
     setFreshlyDeletedNotes((prev) => [...prev, deletedNote]);
+    setDeletedNotesBackup([...deletedNotesBackup, deletedNote]);
     const updatedDatabase = database.filter((note) => note.id !== noteId);
     setDatabase(updatedDatabase);
     if (currentNoteId === noteId) {
@@ -336,6 +337,11 @@ function App() {
     false,
   );
   const [freshlyDeletedNotes, setFreshlyDeletedNotes] = useState<Note[]>([]);
+  const [deletedNotesBackup, setDeletedNotesBackup] = usePersistentState<
+    Note[]
+  >('typehere-deletedNotes', []);
+
+  usePeriodicBackup(deletedNotesBackup);
 
   const toggleTheme = () => {
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
