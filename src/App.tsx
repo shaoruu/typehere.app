@@ -498,6 +498,52 @@ function App() {
       ? trimmedQuery + '...'
       : processedCmdKSearchQuery;
 
+    const regularCommands: CmdKSuggestion[] = [
+      {
+        type: 'action',
+        title: 'toggle light dark theme mode',
+        content:
+          'enter ' + (currentTheme === 'light' ? 'dark' : 'light') + ' mode',
+        color: '#B39DDB', // A soothing lavender
+        onAction: () => {
+          toggleTheme();
+          return false;
+        },
+      },
+      {
+        type: 'action',
+        title: 'toggle vim mode',
+        content: 'turn ' + (isUsingVim ? 'off' : 'on') + ' vim mode',
+        color: '#81D4FA', // A calming light blue
+        onAction: () => {
+          setIsUsingVim(!isUsingVim);
+          return true;
+        },
+      },
+      {
+        type: 'action',
+        title: 'toggle narrow screen mode',
+        content:
+          'enter ' + (isNarrowScreen ? 'wide' : 'narrow') + ' screen mode',
+        color: '#AED581', // A gentle light green
+        onAction: () => {
+          setIsNarrowScreen(!isNarrowScreen);
+          return true;
+        },
+      },
+    ];
+
+    const regularCommandsFuse = new Fuse(regularCommands, {
+      shouldSort: true,
+      keys: ['title', 'content'],
+      includeScore: true,
+      threshold: 0.4,
+    });
+
+    const regularCommandsResults = regularCommandsFuse.search(
+      processedCmdKSearchQuery,
+    );
+
     const actions: CmdKSuggestion[] = [
       ...(processedCmdKSearchQuery
         ? [
@@ -620,6 +666,9 @@ function App() {
             },
           ]
         : []),
+      ...(regularCommandsResults.length > 0
+        ? regularCommandsResults.map((result) => result.item)
+        : []),
     ];
 
     sortNotes(notes);
@@ -632,14 +681,20 @@ function App() {
       ...actions,
     ];
   }, [
-    workspaceNotes,
-    availableWorkspaces,
     cmdKSearchQuery,
     database,
+    workspaceNotes,
+    availableWorkspaces,
+    currentTheme,
+    isUsingVim,
+    isNarrowScreen,
     currentWorkspace,
     currentNoteId,
-    openNewNote,
+    toggleTheme,
+    setIsUsingVim,
+    setIsNarrowScreen,
     openWorkspace,
+    openNewNote,
     moveNoteToWorkspace,
     setCurrentWorkspace,
     setDatabase,
