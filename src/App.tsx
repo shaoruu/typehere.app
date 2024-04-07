@@ -484,7 +484,7 @@ function App() {
       (note) =>
         shouldShowHiddenNotes || !note.isHidden || note.id === currentNoteId,
     );
-    const hiddenNotesMatchLength = 3;
+    const hiddenNotesMatchLength = 5;
     const matchingHiddenNotes = relevantNotes.filter((note) => {
       if (shouldShowHiddenNotes) {
         return false;
