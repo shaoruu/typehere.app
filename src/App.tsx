@@ -257,7 +257,8 @@ function App() {
     const deletedNote = database.find((note) => note.id === noteId);
     if (!deletedNote) return;
     setFreshlyDeletedNotes((prev) => [...prev, deletedNote]);
-    setDeletedNotesBackup([...deletedNotesBackup, deletedNote]);
+    // only keep the last 10 deleted notes
+    setDeletedNotesBackup([...deletedNotesBackup, deletedNote].slice(-10));
     const updatedDatabase = database.filter((note) => note.id !== noteId);
     setDatabase(updatedDatabase);
     if (currentNoteId === noteId) {
