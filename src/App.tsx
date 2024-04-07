@@ -562,6 +562,16 @@ function App() {
           return true;
         },
       },
+      {
+        type: 'action',
+        title: 'backup all notes',
+        content: 'to indexDb',
+        color: '#FFEB3B', // A soothing yellow
+        onAction: () => {
+          backupDataToSafeLocation(database);
+          return true;
+        },
+      },
     ];
 
     const regularCommandsFuse = new Fuse(regularCommands, {
