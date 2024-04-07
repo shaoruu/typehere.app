@@ -1411,11 +1411,15 @@ function App() {
                             fontSize: '0.8rem',
                             display: 'flex',
                             alignItems: 'center',
-                            padding: '2px 4px',
+                            padding: '1px 4px',
                             borderRadius: '4px',
                             cursor: 'pointer',
                             color: 'var(--on-fill-color)',
                             background: 'var(--keyboard-key-color)',
+                            borderRight: '2px solid var(--border-color)',
+                            borderBottom: '2px solid var(--border-color)',
+                            borderLeft: 'none',
+                            borderTop: 'none',
                             visibility:
                               index === selectedCmdKSuggestionIndex
                                 ? 'visible'

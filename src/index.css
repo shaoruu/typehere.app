@@ -38,7 +38,7 @@
   --overlay-background-color: rgba(0, 0, 0, 0.5);
   --box-shadow-color: rgba(0, 0, 0, 0.1);
   --untitled-note-title-color: #66666699; /* Removed quotes for consistency */
-  --keyboard-key-color: #2203;
+  --keyboard-key-color: rgba(40, 40, 33, 0.836);
   --dark-color: #000000;
   --light-color: #ffffff;
   --on-fill-color: #ffffff;
@@ -66,7 +66,7 @@
     0.2
   ); /* Increased shadow for better visibility */
   --untitled-note-title-color: #99999966; /* Removed quotes for consistency */
-  --keyboard-key-color: #cca3;
+  --keyboard-key-color: rgba(40, 40, 33, 0.836);
   --dark-color: #ffffff;
   --light-color: #000000;
   --on-fill-color: #ffffff;
