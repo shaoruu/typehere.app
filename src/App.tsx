@@ -477,18 +477,30 @@ function App() {
       cmdKSearchQuery.startsWith(key),
     );
     const processedCmdKSearchQuery = shouldSearchAllNotes
-      ? cmdKSearchQuery.slice(1)
+      ? cmdKSearchQuery.substring(1)
       : cmdKSearchQuery;
-    const hasCmdKSearchQuery = processedCmdKSearchQuery.length > 0;
-    const notesToSearch = (
-      shouldSearchAllNotes ? database : workspaceNotes
-    ).filter(
+    const relevantNotes = shouldSearchAllNotes ? database : workspaceNotes;
+    const notesToSearch = relevantNotes.filter(
       (note) =>
-        hasCmdKSearchQuery ||
-        shouldShowHiddenNotes ||
-        note.id === currentNoteId ||
-        !note.isHidden,
+        shouldShowHiddenNotes || !note.isHidden || note.id === currentNoteId,
     );
+    const hiddenNotesMatchLength = 3;
+    const matchingHiddenNotes = relevantNotes.filter((note) => {
+      if (shouldShowHiddenNotes) {
+        return false;
+      }
+      const noteTitleLower = getNoteTitle(note).toLowerCase();
+      const queryLower = processedCmdKSearchQuery.toLowerCase();
+      return (
+        note.isHidden &&
+        note.id !== currentNoteId &&
+        processedCmdKSearchQuery.length &&
+        (processedCmdKSearchQuery.length >= hiddenNotesMatchLength
+          ? noteTitleLower.startsWith(queryLower)
+          : // if less than the limit, must be exact match
+            noteTitleLower === queryLower)
+      );
+    });
 
     const notesFuse = new Fuse(notesToSearch, {
       keys: ['content'],
@@ -696,6 +708,10 @@ function App() {
         type: 'note' as const,
         note,
       })),
+      ...matchingHiddenNotes.map((note) => ({
+        type: 'note' as const,
+        note,
+      })),
       ...actions,
     ];
   }, [
@@ -752,22 +768,6 @@ function App() {
       }
 
       if (isCmdKMenuOpen) {
-        // if (
-        //   workspaceNotes.length > 1 &&
-        //   selectedCmdKSuggestionIndex !== null &&
-        //   e.key === 'Backspace' &&
-        //   (e.ctrlKey || e.metaKey)
-        // ) {
-        //   const suggestion = cmdKSuggestions[selectedCmdKSuggestionIndex];
-        //   if (suggestion.type === 'note') {
-        //     deleteNote(suggestion.note.id);
-        //     setSelectedCmdKSuggestionIndex(
-        //       Math.max(selectedCmdKSuggestionIndex - 1, 0),
-        //     );
-        //   }
-        //   return;
-        // }
-
         if (
           freshlyDeletedNotes.length > 0 &&
           e.key === 'z' &&
@@ -855,6 +855,7 @@ function App() {
             e.stopImmediatePropagation();
             if (e.shiftKey) {
               setShouldShowHiddenNotes(!shouldShowHiddenNotes);
+              console.log('hi');
             } else {
               setIsNoteHidden(
                 currentSelectedNote,
