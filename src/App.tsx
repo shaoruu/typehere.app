@@ -7,6 +7,7 @@ import Fuse from 'fuse.js';
 import AceEditor from 'react-ace';
 import { FaMapPin } from 'react-icons/fa';
 import { MdVisibilityOff } from 'react-icons/md';
+
 // import { LuLock, LuUnlock } from 'react-icons/lu';
 
 // Updated textsToReplace with additional text replacements for enhanced text processing
