@@ -6,6 +6,7 @@ import LZString from 'lz-string';
 import Fuse from 'fuse.js';
 import AceEditor from 'react-ace';
 import { FaMapPin } from 'react-icons/fa';
+import { MdVisibilityOff } from 'react-icons/md';
 // import { LuLock, LuUnlock } from 'react-icons/lu';
 
 // Updated textsToReplace with additional text replacements for enhanced text processing
@@ -70,6 +71,7 @@ type Note = {
   content: string;
   updatedAt: string;
   isPinned: boolean;
+  isHidden: boolean;
   workspace?: string;
 };
 
@@ -95,6 +97,7 @@ const freshDatabase = [
     content: '',
     updatedAt: new Date().toISOString(),
     isPinned: false,
+    isHidden: false,
   },
 ];
 
@@ -311,6 +314,7 @@ function App() {
       updatedAt: new Date().toISOString(),
       workspace: (defaultWorkspace || currentWorkspace) ?? undefined,
       isPinned: false,
+      isHidden: false,
     };
 
     setDatabase([...database, newNote]);
@@ -341,6 +345,7 @@ function App() {
   const [deletedNotesBackup, setDeletedNotesBackup] = usePersistentState<
     Note[]
   >('typehere-deletedNotes', []);
+  const [shouldShowHiddenNotes, setShouldShowHiddenNotes] = useState(false);
 
   usePeriodicBackup(deletedNotesBackup);
 
@@ -460,6 +465,11 @@ function App() {
     setDatabase(sortNotes([...database.filter((n) => n.id !== note.id), note]));
   };
 
+  const setIsNoteHidden = (note: Note, isHidden: boolean) => {
+    note.isHidden = isHidden;
+    setDatabase(sortNotes([...database.filter((n) => n.id !== note.id), note]));
+  };
+
   const cmdKSuggestions = useMemo<CmdKSuggestion[]>(() => {
     const searchAllNotesKeys = ['@', '>'];
     const shouldSearchAllNotes = searchAllNotesKeys.some((key) =>
@@ -468,22 +478,29 @@ function App() {
     const processedCmdKSearchQuery = shouldSearchAllNotes
       ? cmdKSearchQuery.slice(1)
       : cmdKSearchQuery;
-
-    const notesFuse = new Fuse(
-      shouldSearchAllNotes ? database : workspaceNotes,
-      {
-        keys: ['content'],
-        includeScore: true,
-        threshold: 0.2,
-      },
+    const hasCmdKSearchQuery = processedCmdKSearchQuery.length > 0;
+    const notesToSearch = (
+      shouldSearchAllNotes ? database : workspaceNotes
+    ).filter(
+      (note) =>
+        hasCmdKSearchQuery ||
+        shouldShowHiddenNotes ||
+        note.id === currentNoteId ||
+        !note.isHidden,
     );
+
+    const notesFuse = new Fuse(notesToSearch, {
+      keys: ['content'],
+      includeScore: true,
+      threshold: 0.2,
+    });
     const workspaceFuse = new Fuse(availableWorkspaces, {
       includeScore: true,
       threshold: 0.05, // lower for workspace match
     });
     const notes = processedCmdKSearchQuery
       ? notesFuse.search(processedCmdKSearchQuery).map((result) => result.item)
-      : workspaceNotes;
+      : notesToSearch;
     const workspaces = processedCmdKSearchQuery
       ? workspaceFuse
           .search(processedCmdKSearchQuery)
@@ -828,6 +845,24 @@ function App() {
             return;
           }
 
+          if (
+            (e.ctrlKey || e.metaKey) &&
+            e.key === "'" &&
+            !currentSelectedNote.isPinned
+          ) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            if (e.shiftKey) {
+              setShouldShowHiddenNotes(!shouldShowHiddenNotes);
+            } else {
+              setIsNoteHidden(
+                currentSelectedNote,
+                !currentSelectedNote.isHidden,
+              );
+            }
+            return;
+          }
+
           if (e.key === 'ArrowLeft' && (e.ctrlKey || e.metaKey)) {
             e.preventDefault();
             const nextWorkspace = getNextWorkspace('left');
@@ -960,6 +995,8 @@ function App() {
     moveNoteToWorkspace,
     openWorkspace,
     pinNote,
+    setIsNoteHidden,
+    shouldShowHiddenNotes,
   ]);
 
   useEffect(() => {
@@ -1357,6 +1394,15 @@ function App() {
                                 : 'var(--untitled-note-title-color)',
                             }}
                           >
+                            {note.isHidden && (
+                              <MdVisibilityOff
+                                style={{
+                                  color: 'var(--hidden-color)',
+                                  marginRight: '4px',
+                                  fontSize: '0.8rem',
+                                }}
+                              />
+                            )}
                             {note.isPinned && (
                               <FaMapPin
                                 style={{

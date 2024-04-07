@@ -43,6 +43,7 @@
   --light-color: #ffffff;
   --on-fill-color: #ffffff;
   --pin-color: #f57d1f;
+  --hidden-color: #005490d0;
 }
 
 :root[data-theme='dark'] {
@@ -71,6 +72,7 @@
   --light-color: #000000;
   --on-fill-color: #ffffff;
   --pin-color: #fda403;
+  --hidden-color: #5fb2ee78;
 }
 
 html,
