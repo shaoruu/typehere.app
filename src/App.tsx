@@ -1016,7 +1016,7 @@ function App() {
       editor.commands.removeCommand('find');
       editor.getSession().setOption('indentedSoftWrap', false);
       editor.resize();
-      editor.renderer.setScrollMargin(0, 128, 0, 0);
+      editor.renderer.setScrollMargin(0, 512, 0, 0);
     }
   }, [isUsingVim]);
 
