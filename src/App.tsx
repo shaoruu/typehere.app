@@ -567,7 +567,7 @@ function App() {
       {
         type: 'action',
         title: 'backup all notes',
-        content: 'to indexDb',
+        content: 'to indexedDb',
         color: '#FFEB3B', // A soothing yellow
         onAction: () => {
           backupDataToSafeLocation(database);
