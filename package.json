@@ -22,6 +22,7 @@
     "react-icons": "^5.0.1"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^1.5.11",
     "@types/crypto-js": "^4.2.2",
     "@types/react": "^18.2.55",
     "@types/react-dom": "^18.2.19",
