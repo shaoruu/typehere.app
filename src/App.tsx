@@ -1025,15 +1025,33 @@ function App() {
 
   const aceEditorRef = useRef<AceEditor>(null);
 
+  const paddingTop = 32; // px
+
   useEffect(() => {
     if (isUsingVim && aceEditorRef.current) {
       const editor = aceEditorRef.current.editor;
       editor.commands.removeCommand('find');
       editor.getSession().setOption('indentedSoftWrap', false);
       editor.resize();
-      editor.renderer.setScrollMargin(32, 512, 0, 0);
+      editor.renderer.setScrollMargin(paddingTop, 512, 0, 0);
     }
   }, [isUsingVim]);
+
+  const currentNote = useMemo(() => {
+    return database.find((n) => n.id === currentNoteId);
+  }, [currentNoteId, database]);
+
+  useEffect(() => {
+    if (aceEditorRef.current && currentNote) {
+      const editor = aceEditorRef.current.editor;
+      editor.renderer.setScrollMargin(
+        currentNote.content ? paddingTop : 0,
+        512,
+        0,
+        0,
+      );
+    }
+  }, [currentNote, database]);
 
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
   const cmdKey = isMac ? '⌘' : 'ctrl';
@@ -1053,6 +1071,7 @@ function App() {
         <div
           style={{
             width: '100%',
+            paddingTop: currentNote?.content ? 0 : `${paddingTop}px`,
             paddingRight: '0',
             paddingBottom: '0',
             height: '100vh',
@@ -1090,7 +1109,7 @@ function App() {
               background: 'var(--note-background-color)',
               color: 'var(--dark-color)',
             }}
-            placeholder="Type here..."
+            placeholder={currentNote?.content ? '' : `Type here...`}
           />
         </div>
       ) : (
