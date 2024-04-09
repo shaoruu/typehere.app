@@ -6,6 +6,8 @@ import LZString from 'lz-string';
 import Fuse from 'fuse.js';
 import AceEditor from 'react-ace';
 import { FaMapPin } from 'react-icons/fa';
+import { save } from '@tauri-apps/api/dialog';
+import { writeTextFile } from '@tauri-apps/api/fs';
 import { MdVisibilityOff } from 'react-icons/md';
 
 // import { LuLock, LuUnlock } from 'react-icons/lu';
@@ -1025,33 +1027,20 @@ function App() {
 
   const aceEditorRef = useRef<AceEditor>(null);
 
-  const paddingTop = 32; // px
-
   useEffect(() => {
     if (isUsingVim && aceEditorRef.current) {
       const editor = aceEditorRef.current.editor;
+      editor.renderer.setScrollMargin(32, 512, 0, 0);
       editor.commands.removeCommand('find');
       editor.getSession().setOption('indentedSoftWrap', false);
       editor.resize();
-      editor.renderer.setScrollMargin(paddingTop, 512, 0, 0);
     }
   }, [isUsingVim]);
 
-  const currentNote = useMemo(() => {
-    return database.find((n) => n.id === currentNoteId);
-  }, [currentNoteId, database]);
-
   useEffect(() => {
-    if (aceEditorRef.current && currentNote) {
-      const editor = aceEditorRef.current.editor;
-      editor.renderer.setScrollMargin(
-        currentNote.content ? paddingTop : 0,
-        512,
-        0,
-        0,
-      );
-    }
-  }, [currentNote, database]);
+    const editor = aceEditorRef.current?.editor;
+    editor?.renderer.setScrollMargin(32, 512, 0, 0);
+  });
 
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
   const cmdKey = isMac ? '⌘' : 'ctrl';
@@ -1071,7 +1060,6 @@ function App() {
         <div
           style={{
             width: '100%',
-            paddingTop: currentNote?.content ? 0 : `${paddingTop}px`,
             paddingRight: '0',
             paddingBottom: '0',
             height: '100vh',
@@ -1109,7 +1097,7 @@ function App() {
               background: 'var(--note-background-color)',
               color: 'var(--dark-color)',
             }}
-            placeholder={currentNote?.content ? '' : `Type here...`}
+            placeholder="Type here..."
           />
         </div>
       ) : (
@@ -1280,21 +1268,34 @@ function App() {
               </button>
               <button
                 tabIndex={-1}
-                onClick={() => {
+                onClick={async () => {
                   const compressedData = LZString.compressToEncodedURIComponent(
                     JSON.stringify(database),
                   );
                   const dataStr =
                     'data:text/json;charset=utf-8,' + compressedData;
-                  const downloadAnchorNode = document.createElement('a');
-                  downloadAnchorNode.setAttribute('href', dataStr);
-                  downloadAnchorNode.setAttribute(
-                    'download',
-                    'notes_export.json',
-                  );
-                  document.body.appendChild(downloadAnchorNode);
-                  downloadAnchorNode.click();
-                  downloadAnchorNode.remove();
+
+                  // @ts-expect-error: bypass tauri
+                  if (window.__TAURI__) {
+                    const filePath = await save({
+                      defaultPath: 'notes_export.json',
+                    });
+                    if (filePath) {
+                      await writeTextFile(filePath, compressedData);
+                    } else {
+                      console.error('No file path selected');
+                    }
+                  } else {
+                    const downloadAnchorNode = document.createElement('a');
+                    downloadAnchorNode.setAttribute('href', dataStr);
+                    downloadAnchorNode.setAttribute(
+                      'download',
+                      'notes_export.json',
+                    );
+                    document.body.appendChild(downloadAnchorNode);
+                    downloadAnchorNode.click();
+                    downloadAnchorNode.remove();
+                  }
                 }}
               >
                 export
@@ -1316,6 +1317,7 @@ function App() {
                     if (decompressedContent) {
                       const content = JSON.parse(decompressedContent);
                       setDatabase(content);
+                      setCurrentWorkspace(null);
                     }
                   };
                 }}

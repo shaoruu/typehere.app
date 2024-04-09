@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@seznam/compose-react-refs": "^1.0.6",
+    "@tauri-apps/api": "^1.5.3",
     "@vercel/analytics": "^1.2.2",
     "ace-builds": "^1.32.6",
     "crypto-js": "^4.2.0",

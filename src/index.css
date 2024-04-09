@@ -298,3 +298,7 @@ input {
 * button {
   cursor: pointer;
 }
+
+.ace_placeholder {
+  padding-top: 32px !important;
+}
