@@ -747,6 +747,11 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent escape from minimizing the window
+      if (e.key === 'Escape') {
+        e.preventDefault();
+      }
+
       // NO PRINT
       if (e.key === 'p' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
@@ -1026,7 +1031,7 @@ function App() {
       editor.commands.removeCommand('find');
       editor.getSession().setOption('indentedSoftWrap', false);
       editor.resize();
-      editor.renderer.setScrollMargin(0, 512, 0, 0);
+      editor.renderer.setScrollMargin(32, 512, 0, 0);
     }
   }, [isUsingVim]);
 
@@ -1047,7 +1052,6 @@ function App() {
       {isUsingVim ? (
         <div
           style={{
-            padding: '2rem',
             width: '100%',
             paddingRight: '0',
             paddingBottom: '0',
