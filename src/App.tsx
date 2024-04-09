@@ -41,6 +41,15 @@ function usePersistentState<T>(
     }
   });
 
+  // Function to save data to localStorage
+  const saveData = (dataToSave: T) => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(dataToSave));
+    } catch (e) {
+      console.error('Failed to save data to local storage', e);
+    }
+  };
+
   useEffect(() => {
     if (!shouldListenToChange) return;
 
@@ -54,15 +63,37 @@ function usePersistentState<T>(
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [storageKey, defaultValue, shouldListenToChange]);
 
+  // Debounce function to limit the rate at which the function can fire
+  const debounce = (func: (dataToSave: T) => void, delay: number) => {
+    let timer: number;
+    return (dataToSave: T) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        func(dataToSave);
+      }, delay);
+    };
+  };
+
+  const saveDataDebounced = debounce(saveData, 100); // Adjust the delay as needed
+
+  useEffect(() => {
+    // Save data when the component is about to unmount or page is about to be closed
+    const handleBeforeUnload = () => {
+      saveData(data);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [data]);
+
   return [
     data,
     (newData: T) => {
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(newData));
-        setData(newData);
-      } catch (e) {
-        console.error('Failed to save data to local storage', e);
-      }
+      setData(newData);
+      saveDataDebounced(newData);
     },
   ] as const;
 }
