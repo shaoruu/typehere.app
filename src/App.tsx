@@ -1303,6 +1303,20 @@ function App() {
               >
                 import
               </button>
+              <div
+                style={{
+                  height: '1px',
+                  width: '100%',
+                  backgroundColor: 'var(--border-color)',
+                }}
+              />
+              <a
+                href="https://github.com/shaoruu/typehere.app"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <button tabIndex={-1}>github</button>
+              </a>
             </div>
           </>
         )}
