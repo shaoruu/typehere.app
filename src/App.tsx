@@ -1,7 +1,6 @@
 // /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { EnhancedTextarea } from './EnhancedTextarea';
 import LZString from 'lz-string';
 import Fuse from 'fuse.js';
 import AceEditor from 'react-ace';
@@ -1059,12 +1058,23 @@ function App() {
   const aceEditorRef = useRef<AceEditor>(null);
 
   useEffect(() => {
-    if (isUsingVim && aceEditorRef.current) {
+    if (aceEditorRef.current) {
       const editor = aceEditorRef.current.editor;
       editor.renderer.setScrollMargin(32, 512, 0, 0);
       editor.commands.removeCommand('find');
       editor.getSession().setOption('indentedSoftWrap', false);
       editor.resize();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!aceEditorRef.current) return;
+
+    const editor = aceEditorRef.current.editor;
+    if (isUsingVim) {
+      editor.setKeyboardHandler('ace/keyboard/vim');
+    } else {
+      editor.setKeyboardHandler('ace/keyboard/keybinding');
     }
   }, [isUsingVim]);
 
@@ -1087,62 +1097,49 @@ function App() {
           : {}),
       }}
     >
-      {isUsingVim ? (
-        <div
-          style={{
-            width: '100%',
-            paddingRight: '0',
-            paddingBottom: '0',
-            height: '100vh',
-          }}
-        >
-          <AceEditor
-            theme={currentTheme === 'dark' ? 'clouds_midnight' : 'clouds'}
-            ref={aceEditorRef}
-            value={textValue}
-            onChange={(newText: string) => {
-              setTextValue(newText);
-              saveNote(currentNoteId, newText);
-            }}
-            setOptions={{
-              showLineNumbers: false,
-              showGutter: false,
-              wrap: true,
-              highlightActiveLine: false,
-              showPrintMargin: false,
-            }}
-            fontSize="1.5rem"
-            onCursorChange={(e) => {
-              setLastAceCursorPosition({
-                row: e.cursor.row,
-                column: e.cursor.column,
-              });
-            }}
-            tabSize={4}
-            keyboardHandler="vim"
-            width="100%"
-            height="100%"
-            className="editor"
-            style={{
-              lineHeight: '1.5',
-              background: 'var(--note-background-color)',
-              color: 'var(--dark-color)',
-            }}
-            placeholder="Type here..."
-          />
-        </div>
-      ) : (
-        <EnhancedTextarea
-          id="editor"
-          ref={textareaDomRef}
-          setText={(newText) => {
+      <div
+        style={{
+          width: '100%',
+          paddingRight: '0',
+          paddingBottom: '0',
+          height: '100vh',
+        }}
+      >
+        <AceEditor
+          theme={currentTheme === 'dark' ? 'clouds_midnight' : 'clouds'}
+          ref={aceEditorRef}
+          value={textValue}
+          onChange={(newText: string) => {
             setTextValue(newText);
             saveNote(currentNoteId, newText);
           }}
-          text={textValue}
+          setOptions={{
+            showLineNumbers: false,
+            showGutter: false,
+            wrap: true,
+            highlightActiveLine: false,
+            showPrintMargin: false,
+          }}
+          fontSize="1.5rem"
+          onCursorChange={(e) => {
+            setLastAceCursorPosition({
+              row: e.cursor.row,
+              column: e.cursor.column,
+            });
+          }}
+          tabSize={4}
+          keyboardHandler="vim"
+          width="100%"
+          height="100%"
+          className="editor"
+          style={{
+            lineHeight: '1.5',
+            background: 'var(--note-background-color)',
+            color: 'var(--dark-color)',
+          }}
           placeholder="Type here..."
         />
-      )}
+      </div>
       <div id="controls">
         {currentWorkspace && (
           <div
