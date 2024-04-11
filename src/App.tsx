@@ -666,8 +666,8 @@ function App() {
               ? [
                   {
                     type: cmdKSuggestionActionType,
-                    title: `move note to ${workspaces[0]}`,
-                    content: `→[${workspaces[0]}]`,
+                    title: `move note to ${workspaces[0].label}`,
+                    content: `→[${workspaces[0].label}]`,
                     color: '#00BCD4',
                     onAction() {
                       if (!currentNote) {
