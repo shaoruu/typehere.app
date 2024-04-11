@@ -540,10 +540,23 @@ function App() {
       includeScore: true,
       threshold: 0.2,
     });
-    const workspaceFuse = new Fuse(availableWorkspaces, {
-      includeScore: true,
-      threshold: 0.05, // lower for workspace match
-    });
+    const workspaceFuse = new Fuse(
+      [
+        ...availableWorkspaces.map((workspace) => ({
+          label: workspace,
+          value: workspace,
+        })),
+        {
+          label: 'all notes',
+          value: null,
+        },
+      ],
+      {
+        keys: ['label'],
+        includeScore: true,
+        threshold: 0.05, // lower for workspace match
+      },
+    );
     const notes = processedCmdKSearchQuery
       ? notesFuse.search(processedCmdKSearchQuery).map((result) => result.item)
       : notesToSearch;
@@ -624,11 +637,11 @@ function App() {
               ? [
                   ...workspaces.slice(0, 3).map((workspace) => ({
                     type: cmdKSuggestionActionType,
-                    title: `go to ${workspace}`,
-                    content: `↓[${workspace}]`,
+                    title: `go to ${workspace.label}`,
+                    content: `↓[${workspace.label}]`,
                     color: '#2196F3',
                     onAction() {
-                      openWorkspace(workspace);
+                      openWorkspace(workspace.value);
                       setCmdKSearchQuery('');
                       return false;
                     },
@@ -663,7 +676,7 @@ function App() {
                       }
                       moveNoteToWorkspace(
                         currentNote,
-                        workspaces[0] ?? undefined,
+                        workspaces[0]?.value ?? undefined,
                       );
                       setCmdKSearchQuery('');
                       return false;
