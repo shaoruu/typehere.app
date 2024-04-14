@@ -649,6 +649,10 @@ function App() {
                 ]
               : []),
 
+            ...(regularCommandsResults.length > 0
+              ? regularCommandsResults.map((result) => result.item)
+              : []),
+
             {
               type: cmdKSuggestionActionType,
               title: 'create new note',
@@ -751,9 +755,6 @@ function App() {
               },
             },
           ]
-        : []),
-      ...(regularCommandsResults.length > 0
-        ? regularCommandsResults.map((result) => result.item)
         : []),
     ];
 
