@@ -617,6 +617,27 @@ function App() {
           return true;
         },
       },
+      {
+        type: 'action',
+        title: 'import notes',
+        content: 'import notes from chosen JSON file',
+        color: '#FA7070', // A soothing pink
+        onAction: () => {
+          fileInputDomRef.current?.click();
+          return true;
+        },
+      },
+      {
+        type: 'action',
+        title: 'export notes',
+        content: 'export notes to chosen JSON file',
+        color: '#FFF7F7', // A soothing white
+        onAction: () => {
+          exportDatabase();
+          setCmdKSearchQuery('');
+          return false;
+        },
+      },
     ];
 
     const regularCommandsFuse = new Fuse(regularCommands, {
@@ -1100,6 +1121,32 @@ function App() {
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
   const cmdKey = isMac ? '⌘' : 'ctrl';
 
+  const exportDatabase = async () => {
+    const compressedData = LZString.compressToEncodedURIComponent(
+      JSON.stringify(database),
+    );
+    const dataStr = 'data:text/json;charset=utf-8,' + compressedData;
+
+    // @ts-expect-error: bypass tauri
+    if (window.__TAURI__) {
+      const filePath = await save({
+        defaultPath: 'notes_export.json',
+      });
+      if (filePath) {
+        await writeTextFile(filePath, compressedData);
+      } else {
+        console.error('No file path selected');
+      }
+    } else {
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute('href', dataStr);
+      downloadAnchorNode.setAttribute('download', 'notes_export.json');
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+    }
+  };
+
   return (
     <main
       style={{
@@ -1308,38 +1355,7 @@ function App() {
               >
                 backup
               </button>
-              <button
-                tabIndex={-1}
-                onClick={async () => {
-                  const compressedData = LZString.compressToEncodedURIComponent(
-                    JSON.stringify(database),
-                  );
-                  const dataStr =
-                    'data:text/json;charset=utf-8,' + compressedData;
-
-                  // @ts-expect-error: bypass tauri
-                  if (window.__TAURI__) {
-                    const filePath = await save({
-                      defaultPath: 'notes_export.json',
-                    });
-                    if (filePath) {
-                      await writeTextFile(filePath, compressedData);
-                    } else {
-                      console.error('No file path selected');
-                    }
-                  } else {
-                    const downloadAnchorNode = document.createElement('a');
-                    downloadAnchorNode.setAttribute('href', dataStr);
-                    downloadAnchorNode.setAttribute(
-                      'download',
-                      'notes_export.json',
-                    );
-                    document.body.appendChild(downloadAnchorNode);
-                    downloadAnchorNode.click();
-                    downloadAnchorNode.remove();
-                  }
-                }}
-              >
+              <button tabIndex={-1} onClick={exportDatabase}>
                 export
               </button>
               <input
