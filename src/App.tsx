@@ -1358,28 +1358,6 @@ function App() {
               <button tabIndex={-1} onClick={exportDatabase}>
                 export
               </button>
-              <input
-                type="file"
-                style={{ display: 'none' }}
-                ref={fileInputDomRef}
-                onChange={(e) => {
-                  const fileReader = new FileReader();
-                  const target = e.target as HTMLInputElement;
-                  if (!target.files) return;
-                  fileReader.readAsText(target.files[0], 'UTF-8');
-                  fileReader.onload = (e) => {
-                    const decompressedContent =
-                      LZString.decompressFromEncodedURIComponent(
-                        e.target?.result as string,
-                      );
-                    if (decompressedContent) {
-                      const content = JSON.parse(decompressedContent);
-                      setDatabase(content);
-                      setCurrentWorkspace(null);
-                    }
-                  };
-                }}
-              />
               <button
                 tabIndex={-1}
                 onClick={() => fileInputDomRef.current?.click()}
@@ -1682,6 +1660,28 @@ function App() {
           </>,
           document.body,
         )}
+      <input
+        type="file"
+        style={{ display: 'none' }}
+        ref={fileInputDomRef}
+        onChange={(e) => {
+          const fileReader = new FileReader();
+          const target = e.target as HTMLInputElement;
+          if (!target.files) return;
+          fileReader.readAsText(target.files[0], 'UTF-8');
+          fileReader.onload = (e) => {
+            const decompressedContent =
+              LZString.decompressFromEncodedURIComponent(
+                e.target?.result as string,
+              );
+            if (decompressedContent) {
+              const content = JSON.parse(decompressedContent);
+              setDatabase(content);
+              setCurrentWorkspace(null);
+            }
+          };
+        }}
+      />
     </main>
   );
 }
