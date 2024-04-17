@@ -583,6 +583,7 @@ function App() {
         color: '#B39DDB', // A soothing lavender
         onAction: () => {
           toggleTheme();
+          setCmdKSearchQuery('');
           return false;
         },
       },
@@ -911,7 +912,11 @@ function App() {
             : vimRight || (e.key === 'ArrowRight' && !e.metaKey && !e.ctrlKey)
             ? 'right'
             : null;
-        if (direction) {
+        const isArrowKeys =
+          !e.metaKey &&
+          !e.ctrlKey &&
+          (e.key === 'ArrowLeft' || e.key === 'ArrowRight');
+        if (direction && (isArrowKeys ? cmdKSearchQuery.length === 0 : true)) {
           e.preventDefault();
           const nextWorkspace = getNextWorkspace(direction);
           if (nextWorkspace !== currentWorkspace) {
