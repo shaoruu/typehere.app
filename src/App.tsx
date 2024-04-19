@@ -503,11 +503,9 @@ function App() {
     setDatabase(sortNotes([...database.filter((n) => n.id !== note.id), note]));
   };
 
-  const cmdKSuggestions = useMemo<CmdKSuggestion[]>(() => {
-    const searchAllNotesKeys = ['@', '>'];
-    const shouldSearchAllNotes = searchAllNotesKeys.some((key) =>
-      cmdKSearchQuery.startsWith(key),
-    );
+  const getAllSuggestions = (
+    shouldSearchAllNotes = false,
+  ): CmdKSuggestion[] => {
     const processedCmdKSearchQuery = shouldSearchAllNotes
       ? cmdKSearchQuery.substring(1)
       : cmdKSearchQuery;
@@ -560,6 +558,11 @@ function App() {
     const notes = processedCmdKSearchQuery
       ? notesFuse.search(processedCmdKSearchQuery).map((result) => result.item)
       : notesToSearch;
+
+    if (notes.length === 0 && !shouldSearchAllNotes) {
+      return getAllSuggestions(true);
+    }
+
     const workspaces = processedCmdKSearchQuery
       ? workspaceFuse
           .search(processedCmdKSearchQuery)
@@ -793,25 +796,15 @@ function App() {
       })),
       ...actions,
     ];
-  }, [
-    cmdKSearchQuery,
-    database,
-    workspaceNotes,
-    availableWorkspaces,
-    currentTheme,
-    isUsingVim,
-    isNarrowScreen,
-    currentWorkspace,
-    currentNoteId,
-    toggleTheme,
-    setIsUsingVim,
-    setIsNarrowScreen,
-    openWorkspace,
-    openNewNote,
-    moveNoteToWorkspace,
-    setCurrentWorkspace,
-    setDatabase,
-  ]);
+  };
+
+  const cmdKSuggestions = useMemo<CmdKSuggestion[]>(() => {
+    const searchAllNotesKeys = ['@', '>'];
+    const shouldSearchAllNotes = searchAllNotesKeys.some((key) =>
+      cmdKSearchQuery.startsWith(key),
+    );
+    return getAllSuggestions(shouldSearchAllNotes);
+  }, [cmdKSearchQuery, getAllSuggestions]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
