@@ -97,6 +97,8 @@ function usePersistentState<T>(
   ] as const;
 }
 
+const searchAllNotesKeys = ['@', '>'];
+
 const getRandomId = () => Math.random().toString(36).substring(2);
 
 type Note = {
@@ -506,9 +508,11 @@ function App() {
   const getAllSuggestions = (
     shouldSearchAllNotes = false,
   ): CmdKSuggestion[] => {
-    const processedCmdKSearchQuery = shouldSearchAllNotes
-      ? cmdKSearchQuery.substring(1)
-      : cmdKSearchQuery;
+    const processedCmdKSearchQuery =
+      shouldSearchAllNotes &&
+      searchAllNotesKeys.some((key) => cmdKSearchQuery.startsWith(key))
+        ? cmdKSearchQuery.substring(1)
+        : cmdKSearchQuery;
     const relevantNotes = shouldSearchAllNotes ? database : workspaceNotes;
     const notesToSearch = relevantNotes.filter(
       (note) =>
@@ -799,7 +803,6 @@ function App() {
   };
 
   const cmdKSuggestions = useMemo<CmdKSuggestion[]>(() => {
-    const searchAllNotesKeys = ['@', '>'];
     const shouldSearchAllNotes = searchAllNotesKeys.some((key) =>
       cmdKSearchQuery.startsWith(key),
     );
