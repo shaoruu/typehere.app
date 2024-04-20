@@ -10,14 +10,16 @@ I used to use typehere.co a lot until the site was taken down, so I created [typ
 
 ## Features
 
+- Offline mode 
 - Toggleable vim
 - Multiple notes
+- Workspaces
 - A bunch of keyboard shortcuts 
 - Fast navigation with cmd+K menu
 - Light/dark theme
 - Everything client-side, all in `localStorage`
-- Periodically backed up to `indexDB` (also on ur laptop)
-- Workspaces
+- Periodically backed up to `indexedDB` (also on ur laptop)
+- Import/export notes
 
 ## Keyboard Shortcuts
 
