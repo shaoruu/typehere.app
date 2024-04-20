@@ -29,9 +29,3 @@ I used to use typehere.co a lot until the site was taken down, so I created [typ
 - <kbd>⌘/⌃</kbd> + <kbd>⇧</kbd> + <kbd>↵</kbd>: Create new note
 - <kbd>⌘/⌃</kbd> + <kbd>e</kbd>: Toggle narrow screen
 - <kbd>⌘/⌃</kbd> + <kbd>j/k</kbd> or <kbd>↑↓</kbd>: Navigate in lists
-
-## Things to Add/Do
-
-- Passowrd protected notes
-- Quick workspaces to switch context
-- Clean up code, right now `App.tsx` has 600+ lines
