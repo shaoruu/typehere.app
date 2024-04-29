@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 // /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
@@ -568,14 +569,6 @@ function App() {
       ? notesFuse.search(processedCmdKSearchQuery).map((result) => result.item)
       : notesToSearch;
 
-    if (shouldSearchAllNotes) {
-      notes.sort((a, b) => {
-        const aInCurrentWorkspace = a.workspace === currentWorkspace ? 1 : 0;
-        const bInCurrentWorkspace = b.workspace === currentWorkspace ? 1 : 0;
-        return bInCurrentWorkspace - aInCurrentWorkspace;
-      });
-    }
-
     if (notes.length <= 1 && !shouldSearchAllNotes) {
       return getAllSuggestions(true);
     }
@@ -801,6 +794,14 @@ function App() {
     ];
 
     sortNotes(notes);
+
+    if (shouldSearchAllNotes) {
+      notes.sort((a, b) => {
+        const aInCurrentWorkspace = a.workspace === currentWorkspace ? 1 : 0;
+        const bInCurrentWorkspace = b.workspace === currentWorkspace ? 1 : 0;
+        return bInCurrentWorkspace - aInCurrentWorkspace;
+      });
+    }
 
     return [
       ...notes.map((note) => ({
