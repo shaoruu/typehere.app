@@ -568,7 +568,15 @@ function App() {
       ? notesFuse.search(processedCmdKSearchQuery).map((result) => result.item)
       : notesToSearch;
 
-    if (notes.length === 0 && !shouldSearchAllNotes) {
+    if (shouldSearchAllNotes) {
+      notes.sort((a, b) => {
+        const aInCurrentWorkspace = a.workspace === currentWorkspace ? 1 : 0;
+        const bInCurrentWorkspace = b.workspace === currentWorkspace ? 1 : 0;
+        return bInCurrentWorkspace - aInCurrentWorkspace;
+      });
+    }
+
+    if (notes.length <= 1 && !shouldSearchAllNotes) {
       return getAllSuggestions(true);
     }
 
