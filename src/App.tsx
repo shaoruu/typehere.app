@@ -664,7 +664,7 @@ function App() {
         onAction: () => {
           setShouldShowScrollbar(!shouldShowScrollbar);
           setCmdKSearchQuery('');
-          return false;
+          return true;
         },
       },
     ];
