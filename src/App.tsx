@@ -1125,7 +1125,7 @@ function App() {
   useEffect(() => {
     if (aceEditorRef.current) {
       const editor = aceEditorRef.current.editor;
-      editor.renderer.setScrollMargin(32, 512, 0, 0);
+      editor.renderer.setScrollMargin(32, 32, 0, 0);
       editor.commands.removeCommand('find');
       editor.getSession().setOption('indentedSoftWrap', false);
       editor.resize();
@@ -1142,11 +1142,6 @@ function App() {
       editor.setKeyboardHandler('ace/keyboard/keybinding');
     }
   }, [isUsingVim]);
-
-  useEffect(() => {
-    const editor = aceEditorRef.current?.editor;
-    editor?.renderer.setScrollMargin(32, 512, 0, 0);
-  });
 
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
   const cmdKey = isMac ? '⌘' : 'ctrl';
