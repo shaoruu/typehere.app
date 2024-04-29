@@ -1128,6 +1128,8 @@ function App() {
       editor.renderer.setScrollMargin(32, 32, 0, 0);
       editor.commands.removeCommand('find');
       editor.commands.removeCommand('removetolineend');
+      editor.commands.removeCommand('findprevious');
+      editor.commands.removeCommand('findnext');
       editor.getSession().setOption('indentedSoftWrap', false);
       editor.resize();
     }
