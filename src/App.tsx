@@ -841,23 +841,23 @@ function App() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Prevent escape from minimizing the window
-      if (e.key === 'Escape') {
+      if (e.code === 'Escape') {
         e.preventDefault();
       }
 
       // NO PRINT
-      if (e.key === 'p' && (e.metaKey || e.ctrlKey)) {
+      if (e.code === 'KeyP' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
       }
 
-      if (isCmdKMenuOpen && e.key === 'Escape') {
+      if (isCmdKMenuOpen && e.code === 'Escape') {
         e.preventDefault();
         setIsCmdKMenuOpen(false);
         focus();
         return;
       }
 
-      if (e.key === 'e' && (e.metaKey || e.ctrlKey)) {
+      if (e.code === 'KeyE' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setIsNarrowScreen(!isNarrowScreen);
         return;
@@ -867,10 +867,10 @@ function App() {
       const currentSelectedNote =
         currentSuggestion.type === 'note' ? currentSuggestion.note : null;
 
-      const vimUp = (e.ctrlKey || e.metaKey) && e.key === 'k';
-      const vimDown = (e.ctrlKey || e.metaKey) && e.key === 'j';
-      const vimLeft = (e.ctrlKey || e.metaKey) && e.key === 'u';
-      const vimRight = (e.ctrlKey || e.metaKey) && e.key === 'i';
+      const vimUp = (e.ctrlKey || e.metaKey) && e.code === 'KeyK';
+      const vimDown = (e.ctrlKey || e.metaKey) && e.code === 'KeyJ';
+      const vimLeft = (e.ctrlKey || e.metaKey) && e.code === 'KeyU';
+      const vimRight = (e.ctrlKey || e.metaKey) && e.code === 'KeyI';
 
       if (isCmdKMenuOpen && (vimUp || vimDown || vimLeft || vimRight)) {
         setHasVimNavigated(true);
@@ -879,7 +879,7 @@ function App() {
       if (isCmdKMenuOpen) {
         if (
           freshlyDeletedNotes.length > 0 &&
-          e.key === 'z' &&
+          e.code === 'KeyZ' &&
           (e.ctrlKey || e.metaKey)
         ) {
           const topOfStack = freshlyDeletedNotes.pop();
@@ -893,7 +893,7 @@ function App() {
 
         let nextIndex: number | null = null;
         const length = cmdKSuggestions.length;
-        if (e.key === 'ArrowUp' || vimUp) {
+        if (e.code === 'ArrowUp' || vimUp) {
           e.preventDefault();
           if (selectedCmdKSuggestionIndex === null) {
             nextIndex = length - 1;
@@ -901,7 +901,7 @@ function App() {
             nextIndex = (selectedCmdKSuggestionIndex - 1 + length) % length;
           }
           setSelectedCmdKSuggestionIndex(nextIndex);
-        } else if (e.key === 'ArrowDown' || vimDown) {
+        } else if (e.code === 'ArrowDown' || vimDown) {
           e.preventDefault();
           if (selectedCmdKSuggestionIndex === null) {
             nextIndex = 0;
@@ -920,7 +920,10 @@ function App() {
           return;
         }
 
-        if (e.key === 'Enter' || (e.key === 'b' && (e.ctrlKey || e.metaKey))) {
+        if (
+          e.code === 'Enter' ||
+          (e.code === 'KeyB' && (e.ctrlKey || e.metaKey))
+        ) {
           e.preventDefault();
           const suggestion = cmdKSuggestions[selectedCmdKSuggestionIndex];
           const shouldCloseCmdK = runCmdKSuggestion(suggestion);
@@ -932,15 +935,15 @@ function App() {
         }
 
         const direction =
-          vimLeft || (e.key === 'ArrowLeft' && !e.metaKey && !e.ctrlKey)
+          vimLeft || (e.code === 'ArrowLeft' && !e.metaKey && !e.ctrlKey)
             ? 'left'
-            : vimRight || (e.key === 'ArrowRight' && !e.metaKey && !e.ctrlKey)
+            : vimRight || (e.code === 'ArrowRight' && !e.metaKey && !e.ctrlKey)
             ? 'right'
             : null;
         const isArrowKeys =
           !e.metaKey &&
           !e.ctrlKey &&
-          (e.key === 'ArrowLeft' || e.key === 'ArrowRight');
+          (e.code === 'ArrowLeft' || e.code === 'ArrowRight');
         if (direction && (isArrowKeys ? cmdKSearchQuery.length === 0 : true)) {
           e.preventDefault();
           const nextWorkspace = getNextWorkspace(direction);
@@ -950,7 +953,10 @@ function App() {
         }
 
         if (currentSelectedNote) {
-          if ((e.key === 'h' || e.key === 'g') && (e.metaKey || e.ctrlKey)) {
+          if (
+            (e.code === 'KeyH' || e.code === 'KeyG') &&
+            (e.metaKey || e.ctrlKey)
+          ) {
             e.preventDefault();
             e.stopImmediatePropagation();
             pinNote(currentSelectedNote, !currentSelectedNote.isPinned);
@@ -961,14 +967,13 @@ function App() {
 
           if (
             (e.ctrlKey || e.metaKey) &&
-            e.key === "'" &&
+            e.code === 'Quote' &&
             !currentSelectedNote.isPinned
           ) {
             e.preventDefault();
             e.stopImmediatePropagation();
             if (e.shiftKey) {
               setShouldShowHiddenNotes(!shouldShowHiddenNotes);
-              console.log('hi');
             } else {
               setIsNoteHidden(
                 currentSelectedNote,
@@ -978,7 +983,7 @@ function App() {
             return;
           }
 
-          if (e.key === 'ArrowLeft' && (e.ctrlKey || e.metaKey)) {
+          if (e.code === 'ArrowLeft' && (e.ctrlKey || e.metaKey)) {
             e.preventDefault();
             const nextWorkspace = getNextWorkspace('left');
             if (nextWorkspace !== currentWorkspace) {
@@ -991,7 +996,7 @@ function App() {
             return;
           }
 
-          if (e.key === 'ArrowRight' && (e.ctrlKey || e.metaKey)) {
+          if (e.code === 'ArrowRight' && (e.ctrlKey || e.metaKey)) {
             e.preventDefault();
             const nextWorkspace = getNextWorkspace('right');
             if (nextWorkspace !== currentWorkspace) {
@@ -1011,14 +1016,17 @@ function App() {
         return;
       }
 
-      if (isHelpMenuOpen && (e.key === 'Escape' || e.key === 'Enter')) {
+      if (isHelpMenuOpen && (e.code === 'Escape' || e.code === 'Enter')) {
         e.preventDefault();
         setIsHelpMenuOpen((prev) => !prev);
         focus();
         return;
       }
 
-      if ((e.key === 'p' || e.key === 'k') && (e.metaKey || e.ctrlKey)) {
+      if (
+        (e.code === 'KeyP' || e.code === 'KeyK') &&
+        (e.metaKey || e.ctrlKey)
+      ) {
         e.preventDefault();
         textareaDomRef.current?.blur();
         setSelectedCmdKSuggestionIndex(0);
@@ -1034,7 +1042,7 @@ function App() {
       }
 
       if (
-        e.key === 'Enter' &&
+        e.code === 'Enter' &&
         (e.metaKey || e.ctrlKey) &&
         e.shiftKey &&
         textValue.trim().length !== 0
@@ -1044,7 +1052,7 @@ function App() {
         return;
       }
 
-      if (e.key === 'Enter') {
+      if (e.code === 'Enter') {
         focus();
       } else if (isUsingVim && !isCmdKMenuOpen) {
         if (document.activeElement === document.body) {
