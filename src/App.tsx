@@ -520,22 +520,27 @@ function App() {
     );
     const hiddenNotesMatchLength = 5;
     // we're matching the entire database for easier access.
-    const matchingHiddenNotes = database.filter((note) => {
-      if (shouldShowHiddenNotes) {
-        return false;
-      }
-      const noteTitleLower = getNoteTitle(note).toLowerCase();
-      const queryLower = processedCmdKSearchQuery.toLowerCase();
-      return (
-        note.isHidden &&
-        note.id !== currentNoteId &&
-        processedCmdKSearchQuery.length &&
-        (processedCmdKSearchQuery.length >= hiddenNotesMatchLength
-          ? noteTitleLower.startsWith(queryLower)
-          : // if less than the limit, must be exact match
-            noteTitleLower === queryLower)
+    const matchingHiddenNotes = database
+      .filter((note) => {
+        if (shouldShowHiddenNotes) {
+          return false;
+        }
+        const noteTitleLower = getNoteTitle(note).toLowerCase();
+        const queryLower = processedCmdKSearchQuery.toLowerCase();
+        return (
+          note.isHidden &&
+          note.id !== currentNoteId &&
+          processedCmdKSearchQuery.length &&
+          (processedCmdKSearchQuery.length >= hiddenNotesMatchLength
+            ? noteTitleLower.startsWith(queryLower)
+            : // if less than the limit, must be exact match
+              noteTitleLower === queryLower)
+        );
+      })
+      .sort(
+        (a, b) =>
+          new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime(),
       );
-    });
 
     const notesFuse = new Fuse(notesToSearch, {
       keys: ['content'],
