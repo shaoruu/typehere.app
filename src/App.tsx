@@ -1127,6 +1127,7 @@ function App() {
       const editor = aceEditorRef.current.editor;
       editor.renderer.setScrollMargin(32, 32, 0, 0);
       editor.commands.removeCommand('find');
+      editor.commands.removeCommand('removetolineend');
       editor.getSession().setOption('indentedSoftWrap', false);
       editor.resize();
     }
