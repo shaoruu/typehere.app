@@ -224,6 +224,10 @@ function App() {
     freshDatabase[0].id,
     false,
   );
+  const [shouldShowScrollbar, setShouldShowScrollbar] = usePersistentState(
+    'typehere-shouldShowScrollbar',
+    false,
+  );
   const [moreMenuPosition, setMoreMenuPosition] = useState<{
     x: number;
     y: number;
@@ -648,6 +652,17 @@ function App() {
         color: '#FFF7F7', // A soothing white
         onAction: () => {
           exportDatabase();
+          setCmdKSearchQuery('');
+          return false;
+        },
+      },
+      {
+        type: 'action',
+        title: shouldShowScrollbar ? 'hide scrollbar' : 'show scrollbar',
+        content: shouldShowScrollbar ? 'hide scrollbar' : 'show scrollbar',
+        color: '#B2B2FF', // A soothing light blue
+        onAction: () => {
+          setShouldShowScrollbar(!shouldShowScrollbar);
           setCmdKSearchQuery('');
           return false;
         },
@@ -1162,6 +1177,24 @@ function App() {
     }
   };
 
+  useEffect(() => {
+    if (aceEditorRef.current) {
+      const editor = aceEditorRef.current.editor;
+      if (isNarrowScreen) {
+        editor.renderer.setPadding(0);
+      } else {
+        editor.renderer.setPadding(36);
+      }
+    }
+  }, [isNarrowScreen]);
+
+  useEffect(() => {
+    const aceScroller = document.querySelector('.ace_scrollbar') as HTMLElement;
+    if (aceScroller) {
+      aceScroller.style.visibility = shouldShowScrollbar ? 'visible' : 'hidden';
+    }
+  }, [shouldShowScrollbar]);
+
   return (
     <main
       style={{
@@ -1176,9 +1209,9 @@ function App() {
       <div
         style={{
           width: '100%',
-          padding: '0px 32px',
           paddingBottom: '0',
           height: '100vh',
+          ...(shouldShowScrollbar ? { paddingRight: '0px' } : {}),
         }}
       >
         <AceEditor
@@ -1208,6 +1241,16 @@ function App() {
           width="100%"
           height="100%"
           className="editor"
+          onLoad={() => {
+            const aceScroller = document.querySelector(
+              '.ace_scrollbar',
+            ) as HTMLElement;
+            if (aceScroller) {
+              aceScroller.style.visibility = shouldShowScrollbar
+                ? 'visible'
+                : 'hidden';
+            }
+          }}
           style={{
             lineHeight: '1.5',
             background: 'var(--note-background-color)',
@@ -1379,6 +1422,23 @@ function App() {
               >
                 import
               </button>
+              {/* <button
+                tabIndex={-1}
+                onClick={() => setShouldShowScrollbar(!shouldShowScrollbar)}
+              >
+                <span
+                  title={
+                    shouldShowScrollbar ? 'hide scrollbar' : 'show scrollbar'
+                  }
+                  style={{
+                    textDecoration: shouldShowScrollbar
+                      ? 'line-through'
+                      : 'none',
+                  }}
+                >
+                  scrollbar
+                </span>
+              </button> */}
               <div
                 style={{
                   height: '1px',
@@ -1413,6 +1473,7 @@ function App() {
                 left: 0,
                 right: 0,
                 bottom: 0,
+                zIndex: 99,
               }}
               onClick={() => {
                 setIsCmdKMenuOpen(false);
