@@ -1167,7 +1167,7 @@ function App() {
       style={{
         ...(isNarrowScreen
           ? {
-              maxWidth: 'calc(800px + 4rem)',
+              maxWidth: 'calc(800px + 64px)',
               margin: '0 auto',
             }
           : {}),
@@ -1176,7 +1176,7 @@ function App() {
       <div
         style={{
           width: '100%',
-          padding: '0px 2rem',
+          padding: '0px 32px',
           paddingBottom: '0',
           height: '100vh',
         }}
