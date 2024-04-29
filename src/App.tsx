@@ -539,7 +539,7 @@ function App() {
       })
       .sort(
         (a, b) =>
-          new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime(),
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
       );
 
     const notesFuse = new Fuse(notesToSearch, {
