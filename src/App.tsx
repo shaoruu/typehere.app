@@ -659,7 +659,7 @@ function App() {
       {
         type: 'action',
         title: shouldShowScrollbar ? 'hide scrollbar' : 'show scrollbar',
-        content: shouldShowScrollbar ? 'hide scrollbar' : 'show scrollbar',
+        content: 'toggle the scrollbar visibility',
         color: '#B2B2FF', // A soothing light blue
         onAction: () => {
           setShouldShowScrollbar(!shouldShowScrollbar);
