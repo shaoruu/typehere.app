@@ -42,18 +42,18 @@ function domReady(
   });
 }
 
-const safeDOM = {
-  append(parent: HTMLElement, child: HTMLElement) {
-    if (!Array.from(parent.children).find((e) => e === child)) {
-      return parent.appendChild(child);
-    }
-  },
-  remove(parent: HTMLElement, child: HTMLElement) {
-    if (Array.from(parent.children).find((e) => e === child)) {
-      return parent.removeChild(child);
-    }
-  },
-};
+// const safeDOM = {
+//   append(parent: HTMLElement, child: HTMLElement) {
+//     if (!Array.from(parent.children).find((e) => e === child)) {
+//       return parent.appendChild(child);
+//     }
+//   },
+//   remove(parent: HTMLElement, child: HTMLElement) {
+//     if (Array.from(parent.children).find((e) => e === child)) {
+//       return parent.removeChild(child);
+//     }
+//   },
+// };
 
 /**
  * https://tobiasahlin.com/spinkit
@@ -100,12 +100,12 @@ function useLoading() {
 
   return {
     appendLoading() {
-      safeDOM.append(document.head, oStyle);
-      safeDOM.append(document.body, oDiv);
+      // safeDOM.append(document.head, oStyle);
+      // safeDOM.append(document.body, oDiv);
     },
     removeLoading() {
-      safeDOM.remove(document.head, oStyle);
-      safeDOM.remove(document.body, oDiv);
+      // safeDOM.remove(document.head, oStyle);
+      // safeDOM.remove(document.body, oDiv);
     },
   };
 }

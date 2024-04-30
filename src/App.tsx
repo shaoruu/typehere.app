@@ -1136,6 +1136,7 @@ function App() {
       editor.commands.removeCommand('removetolineend');
       editor.commands.removeCommand('findprevious');
       editor.commands.removeCommand('findnext');
+      editor.commands.removeCommand('gotoright');
       editor.getSession().setOption('indentedSoftWrap', false);
       editor.resize();
     }
