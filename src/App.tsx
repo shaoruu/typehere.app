@@ -6,8 +6,6 @@ import LZString from 'lz-string';
 import Fuse from 'fuse.js';
 import AceEditor from 'react-ace';
 import { FaMapPin } from 'react-icons/fa';
-import { save } from '@tauri-apps/api/dialog';
-import { writeTextFile } from '@tauri-apps/api/fs';
 import { MdVisibilityOff } from 'react-icons/md';
 
 // import { LuLock, LuUnlock } from 'react-icons/lu';
@@ -1163,36 +1161,13 @@ function App() {
     );
     const dataStr = 'data:text/json;charset=utf-8,' + compressedData;
 
-    // @ts-expect-error: bypass tauri
-    if (window.__TAURI__) {
-      const filePath = await save({
-        defaultPath: 'notes_export.json',
-      });
-      if (filePath) {
-        await writeTextFile(filePath, compressedData);
-      } else {
-        console.error('No file path selected');
-      }
-    } else {
-      const downloadAnchorNode = document.createElement('a');
-      downloadAnchorNode.setAttribute('href', dataStr);
-      downloadAnchorNode.setAttribute('download', 'notes_export.json');
-      document.body.appendChild(downloadAnchorNode);
-      downloadAnchorNode.click();
-      downloadAnchorNode.remove();
-    }
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute('href', dataStr);
+    downloadAnchorNode.setAttribute('download', 'notes_export.json');
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
   };
-
-  useEffect(() => {
-    if (aceEditorRef.current) {
-      const editor = aceEditorRef.current.editor;
-      if (isNarrowScreen) {
-        editor.renderer.setPadding(0);
-      } else {
-        editor.renderer.setPadding(36);
-      }
-    }
-  }, [isNarrowScreen]);
 
   useEffect(() => {
     const aceScroller = document.querySelector('.ace_scrollbar') as HTMLElement;
@@ -1215,8 +1190,8 @@ function App() {
       <div
         style={{
           width: '100%',
-          paddingBottom: '0',
           height: '100vh',
+          padding: isNarrowScreen ? '0px' : '0 36px',
           ...(shouldShowScrollbar ? { paddingRight: '0px' } : {}),
         }}
       >

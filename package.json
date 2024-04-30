@@ -1,19 +1,45 @@
 {
   "name": "typehere",
+  "productName": "Type Here",
+  "description": "A textarea with vim (and more).",
+  "author": "Shaoru Ian Huang",
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "main": "dist-electron/main/index.js",
+  "debug": {
+    "env": {
+      "VITE_DEV_SERVER_URL": "http://127.0.0.1:7777/"
+    }
+  },
+  "build": {
+    "appId": "com.typehere.app",
+    "asar": true,
+    "directories": {
+      "output": "release/${version}"
+    },
+    "files": [
+      "dist-electron",
+      "dist"
+    ],
+    "mac": {
+      "artifactName": "${productName}_${version}.${ext}",
+      "icon": "icons/icon.icns",
+      "target": [
+        "dmg"
+      ]
+    }
+  },
   "scripts": {
     "dev": "vite",
-    "dev:tauri": "tauri dev",
+    "dev:electron": "vite --config electron-vite.config.ts",
     "build": "tsc && vite build",
-    "build:tauri": "yarn tauri build",
+    "build:electron": "tsc && vite build --config electron-vite.config.ts && electron-builder",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
   "dependencies": {
     "@seznam/compose-react-refs": "^1.0.6",
-    "@tauri-apps/api": "^1.5.3",
     "@vercel/analytics": "^1.2.2",
     "ace-builds": "^1.32.6",
     "crypto-js": "^4.2.0",
@@ -22,10 +48,10 @@
     "react": "^18.2.0",
     "react-ace": "^10.1.0",
     "react-dom": "^18.2.0",
-    "react-icons": "^5.0.1"
+    "react-icons": "^5.0.1",
+    "vite-plugin-replace": "^0.1.1"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^1.5.11",
     "@types/crypto-js": "^4.2.2",
     "@types/react": "^18.2.55",
     "@types/react-dom": "^18.2.19",
@@ -33,11 +59,16 @@
     "@typescript-eslint/parser": "^6.21.0",
     "@vitejs/plugin-react": "^4.2.1",
     "@vitejs/plugin-react-swc": "^3.5.0",
+    "electron": "^30.0.1",
+    "electron-builder": "^24.13.3",
+    "electron-updater": "^6.1.8",
     "eslint": "^8.56.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
     "typescript": "^5.2.2",
     "vite": "^5.1.0",
+    "vite-plugin-electron": "^0.28.7",
+    "vite-plugin-electron-renderer": "^0.14.5",
     "vite-plugin-pwa": "^0.19.4"
   }
 }
