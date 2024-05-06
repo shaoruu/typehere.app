@@ -1131,10 +1131,10 @@ function App() {
     if (aceEditorRef.current) {
       const editor = aceEditorRef.current.editor;
       editor.renderer.setScrollMargin(32, 32, 0, 0);
-      editor.commands.removeCommand('find');
-      editor.commands.removeCommand('removetolineend');
+      // editor.commands.removeCommand('find');
       editor.commands.removeCommand('findprevious');
       editor.commands.removeCommand('findnext');
+      editor.commands.removeCommand('removetolineend');
       editor.getSession().setOption('indentedSoftWrap', false);
       editor.resize();
     }
@@ -1195,7 +1195,7 @@ function App() {
         }}
       >
         <AceEditor
-          theme={currentTheme === 'dark' ? 'clouds_midnight' : 'clouds'}
+          theme={currentTheme === 'dark' ? 'gruvbox' : 'clouds'}
           ref={aceEditorRef}
           value={textValue}
           onChange={(newText: string) => {

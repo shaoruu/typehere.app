@@ -296,3 +296,8 @@ input {
 .ace_placeholder {
   padding-top: 32px !important;
 }
+
+.ace_search {
+  transform: scale(0.888888888);
+  transform-origin: top right;
+}
