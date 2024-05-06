@@ -43,6 +43,7 @@
     "@vercel/analytics": "^1.2.2",
     "ace-builds": "^1.32.6",
     "crypto-js": "^4.2.0",
+    "electron-store": "^9.0.0",
     "fuse.js": "^7.0.0",
     "lz-string": "^1.5.0",
     "react": "^18.2.0",

@@ -970,14 +970,13 @@ function App() {
           ) {
             e.preventDefault();
             e.stopImmediatePropagation();
-            if (e.shiftKey) {
+            const shouldAllowShowAll = false;
+            if (e.shiftKey && shouldAllowShowAll) {
               setShouldShowHiddenNotes(!shouldShowHiddenNotes);
-            } else {
-              setIsNoteHidden(
-                currentSelectedNote,
-                !currentSelectedNote.isHidden,
-              );
+              return;
             }
+
+            setIsNoteHidden(currentSelectedNote, !currentSelectedNote.isHidden);
             return;
           }
 

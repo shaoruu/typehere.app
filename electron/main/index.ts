@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import os from 'node:os';
+import Store from 'electron-store';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -40,10 +41,34 @@ let win: BrowserWindow | null = null;
 const preload = path.join(__dirname, '../preload/index.mjs');
 const indexHtml = path.join(RENDERER_DIST, 'index.html');
 
+interface WindowBounds {
+  width: number;
+  height: number;
+  x?: number;
+  y?: number;
+}
+
+const store = new Store<WindowBounds>({
+  defaults: {
+    width: 800,
+    height: 600,
+  },
+});
+
 async function createWindow() {
+  // @ts-expect-error some sort of electron typing bug?
+  const { width, height, x, y } = store.get('windowBounds', {
+    width: 800,
+    height: 600,
+  });
+
   win = new BrowserWindow({
     title: 'Main window',
     icon: path.join(process.env.VITE_PUBLIC ?? '', 'favicon.ico'),
+    x,
+    y,
+    width,
+    height,
     webPreferences: {
       preload,
       // Warning: Enable nodeIntegration and disable contextIsolation is not secure in production
@@ -73,6 +98,13 @@ async function createWindow() {
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https:')) shell.openExternal(url);
     return { action: 'deny' };
+  });
+
+  win.on('close', () => {
+    if (win) {
+      // @ts-expect-error some sort of electron typing bug?
+      store.set('windowBounds', win.getBounds());
+    }
   });
 }
 
