@@ -7,7 +7,7 @@ import './index.css';
 import 'ace-builds/src-noconflict/ace';
 import 'ace-builds/src-noconflict/ext-language_tools';
 import 'ace-builds/src-noconflict/theme-clouds';
-import 'ace-builds/src-noconflict/theme-Gruvbox';
+import 'ace-builds/src-noconflict/theme-clouds_midnight';
 import 'ace-builds/src-noconflict/keybinding-vim';
 import 'ace-builds/src-noconflict/ext-elastic_tabstops_lite';
 import 'ace-builds/src-noconflict/ext-searchbox';

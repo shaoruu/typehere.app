@@ -1195,7 +1195,7 @@ function App() {
         }}
       >
         <AceEditor
-          theme={currentTheme === 'dark' ? 'gruvbox' : 'clouds'}
+          theme={currentTheme === 'dark' ? 'clouds_midnight' : 'clouds'}
           ref={aceEditorRef}
           value={textValue}
           onChange={(newText: string) => {
