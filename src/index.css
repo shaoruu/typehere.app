@@ -31,6 +31,7 @@
   --untitled-note-title-color: #66666699; /* Removed quotes for consistency */
   --keyboard-key-color: rgba(40, 40, 33, 0.836);
   --dark-color: #000000;
+  --secondary-dark-color: #aaa;
   --light-color: #ffffff;
   --on-fill-color: #ffffff;
   --pin-color: #f57d1f;
@@ -60,6 +61,7 @@
   --untitled-note-title-color: #99999966; /* Removed quotes for consistency */
   --keyboard-key-color: rgba(40, 40, 33, 0.836);
   --dark-color: #ffffff;
+  --secondary-dark-color: #555;
   --light-color: #000000;
   --on-fill-color: #ffffff;
   --pin-color: #fda403;
@@ -183,6 +185,8 @@ input {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* display: flex; */
+  /* align-items: center; */
 }
 
 .note-list-item-delete-btn {

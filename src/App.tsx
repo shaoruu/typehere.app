@@ -23,6 +23,8 @@ const textsToReplace: [string | RegExp, string][] = [
   ['+-', '±'],
 ];
 
+const digitCount = 5;
+
 function usePersistentState<T>(
   storageKey: string,
   defaultValue?: T,
@@ -231,6 +233,7 @@ function App() {
     y: number;
   } | null>(null);
   const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
+  const [isAltKeyDown, setIsAltKeyDown] = useState(false);
   const [textValue, setTextValue] = useState('');
   const [lastAceCursorPosition, setLastAceCursorPosition] = useState({
     row: 0,
@@ -880,6 +883,28 @@ function App() {
       }
 
       if (isCmdKMenuOpen) {
+        const topXDigits = new Array(digitCount)
+          .fill(0)
+          .map((_, i) => `Digit${i + 1}`);
+        const topXDigitsSet = new Set(topXDigits);
+
+        if (e.altKey) {
+          setIsAltKeyDown(true);
+        }
+
+        if (e.altKey && topXDigitsSet.has(e.code)) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          const index = topXDigits.findIndex((key) => key === e.code);
+          const suggestion = cmdKSuggestions[index];
+          const shouldCloseCmdK = runCmdKSuggestion(suggestion);
+          if (shouldCloseCmdK) {
+            setIsCmdKMenuOpen(false);
+            setSelectedCmdKSuggestionIndex(0);
+          }
+          return;
+        }
+
         if (
           freshlyDeletedNotes.length > 0 &&
           e.code === 'KeyZ' &&
@@ -1063,34 +1088,37 @@ function App() {
       }
     };
 
-    // const handleKeyUp = (event: KeyboardEvent) => {
-    //   if (
-    //     hasVimNavigated &&
-    //     isCmdKMenuOpen &&
-    //     (event.key === 'Meta' || event.key === 'Control')
-    //   ) {
-    //     let shouldCloseCmdK: boolean = true;
-    //     if (cmdKSuggestions.length > 0) {
-    //       const suggestion = cmdKSuggestions[selectedCmdKSuggestionIndex];
-    //       shouldCloseCmdK = runCmdKSuggestion(suggestion);
-    //     }
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (event.code === 'AltLeft') {
+        setIsAltKeyDown(false);
+      }
+      // if (
+      //   hasVimNavigated &&
+      //   isCmdKMenuOpen &&
+      //   (event.key === 'Meta' || event.key === 'Control')
+      // ) {
+      //   let shouldCloseCmdK: boolean = true;
+      //   if (cmdKSuggestions.length > 0) {
+      //     const suggestion = cmdKSuggestions[selectedCmdKSuggestionIndex];
+      //     shouldCloseCmdK = runCmdKSuggestion(suggestion);
+      //   }
 
-    //     if (shouldCloseCmdK) {
-    //       setIsCmdKMenuOpen(false);
-    //     }
+      //   if (shouldCloseCmdK) {
+      //     setIsCmdKMenuOpen(false);
+      //   }
 
-    //     setHasVimNavigated(false);
+      //   setHasVimNavigated(false);
 
-    //     focus();
-    //   }
-    // };
+      //   focus();
+      // }
+    };
 
     window.addEventListener('keydown', handleKeyDown);
-    // window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('keyup', handleKeyUp);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      // window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('keyup', handleKeyUp);
     };
   }, [
     database,
@@ -1543,6 +1571,18 @@ function App() {
                                 : 'var(--untitled-note-title-color)',
                             }}
                           >
+                            {isAltKeyDown && index + 1 <= digitCount && (
+                              <div
+                                style={{
+                                  display: 'inline-block',
+                                  color: 'var(--secondary-dark-color)',
+                                  marginRight: '6px',
+                                  fontSize: '0.8rem',
+                                }}
+                              >
+                                {index + 1}
+                              </div>
+                            )}
                             {note.isHidden && (
                               <MdVisibilityOff
                                 style={{
@@ -1561,7 +1601,7 @@ function App() {
                                 }}
                               />
                             )}
-                            {title || 'New Note'}
+                            <span>{title.trim() || 'New Note'}</span>
                           </div>
                           <button
                             className="note-list-item-delete-btn"
