@@ -825,11 +825,11 @@ function App() {
     }
 
     return [
-      ...notes.map((note) => ({
+      ...matchingHiddenNotes.map((note) => ({
         type: 'note' as const,
         note,
       })),
-      ...matchingHiddenNotes.map((note) => ({
+      ...notes.map((note) => ({
         type: 'note' as const,
         note,
       })),
