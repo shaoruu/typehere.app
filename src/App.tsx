@@ -554,7 +554,7 @@ function App() {
         { name: 'workspace', weight: 0.5 },
       ],
       includeScore: true,
-      threshold: 0.5,
+      threshold: 0.3,
     });
     const workspaceFuse = new Fuse(
       [
