@@ -546,9 +546,12 @@ function App() {
       );
 
     const notesFuse = new Fuse(notesToSearch, {
-      keys: ['content'],
+      keys: [
+        { name: 'content', weight: 1.5 },
+        { name: 'workspace', weight: 0.5 },
+      ],
       includeScore: true,
-      threshold: 0.2,
+      threshold: 0.5,
     });
     const workspaceFuse = new Fuse(
       [
@@ -568,7 +571,9 @@ function App() {
       },
     );
     const notes = processedCmdKSearchQuery
-      ? notesFuse.search(processedCmdKSearchQuery).map((result) => result.item)
+      ? notesFuse
+          .search(processedCmdKSearchQuery.trim())
+          .map((result) => result.item)
       : notesToSearch;
 
     if (notes.length <= 1 && !shouldSearchAllNotes) {
