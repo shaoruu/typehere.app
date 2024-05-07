@@ -1576,7 +1576,7 @@ function App() {
                                 style={{
                                   display: 'inline-block',
                                   color: 'var(--secondary-dark-color)',
-                                  marginRight: '6px',
+                                  marginRight: '4px',
                                   fontSize: '0.8rem',
                                 }}
                               >
