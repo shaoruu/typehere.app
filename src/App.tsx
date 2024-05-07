@@ -549,12 +549,9 @@ function App() {
       );
 
     const notesFuse = new Fuse(notesToSearch, {
-      keys: [
-        { name: 'content', weight: 1.5 },
-        { name: 'workspace', weight: 0.5 },
-      ],
+      keys: [{ name: 'content', weight: 1 }],
       includeScore: true,
-      threshold: 0.3,
+      threshold: 0.2,
     });
     const workspaceFuse = new Fuse(
       [
