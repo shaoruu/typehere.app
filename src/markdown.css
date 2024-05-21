@@ -1,0 +1,214 @@
+.preview {
+  margin: 0 auto;
+  font-family: Georgia, Palatino, serif;
+  color: var(--dark-color);
+  line-height: 1.6; /* Increased line-height for better readability */
+  max-width: 960px;
+  padding: 30px;
+}
+
+.preview h1,
+.preview h2,
+.preview h3,
+.preview h4,
+.preview h5,
+.preview h6 {
+  line-height: 1;
+  margin: 0;
+  margin-top: 1.5rem;
+  text-rendering: optimizeLegibility;
+}
+
+.preview h1 {
+  font-size: 2.75rem;
+}
+.preview h2 {
+  font-size: 2rem;
+}
+.preview h3 {
+  font-size: 1.65rem;
+}
+.preview h4 {
+  font-size: 1.25rem;
+}
+.preview h5 {
+  font-size: 1.1rem;
+}
+.preview h6 {
+  font-size: 1rem;
+}
+
+.preview h2 em,
+.preview h3 em {
+  color: grey;
+}
+
+.preview small {
+  font-size: 65%;
+}
+
+.preview p {
+  margin-top: 0.75rem;
+}
+
+.preview hr {
+  margin: 0.75rem 0;
+  opacity: 0.5;
+}
+
+.preview ol,
+.preview ul {
+  margin-top: 0.75rem;
+  padding-left: 1.5em; /* Standard indentation for lists */
+}
+
+.preview ol ul,
+.preview ol ol,
+.preview ul ul,
+.preview ul ol {
+  margin-left: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.preview li {
+  margin: 0.5em 0;
+  line-height: 24px;
+  padding-left: 0.5em; /* Reduced padding for better spacing in todo lists */
+}
+
+.preview li ul,
+.preview li ol {
+  margin-left: 24px;
+}
+
+.preview abbr {
+  font-variant: small-caps;
+  font-weight: 600;
+  text-transform: lowercase;
+  color: #808080;
+}
+
+.preview abbr[title]:hover {
+  cursor: help;
+}
+
+.preview blockquote {
+  border-left: 5px solid #333;
+  padding-left: 0.75em;
+  margin-left: calc(-0.75em - 5px);
+  font-style: italic;
+  margin: 1em 2em;
+  background-color: var(
+    --note-selected-background-color
+  ); /* Added background color */
+  max-width: 476px;
+}
+
+.preview blockquote + figcaption {
+  display: block;
+  margin-top: -1.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 75%;
+  text-align: right;
+}
+
+.preview blockquote + figcaption:before {
+  content: '— ';
+  opacity: 0.05;
+}
+
+.preview blockquote p {
+  color: var(--secondary-dark-color);
+  max-width: 460px;
+}
+
+.preview pre {
+  overflow: auto;
+  margin: 0.75rem 0;
+  padding: 0.5rem;
+  font-size: 0.875em;
+  white-space: pre;
+  background-color: #f8f8f8;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  max-width: 800px;
+}
+
+.preview code {
+  padding: 0 0.25em;
+  white-space: pre;
+  font-family: Consolas, Monaco, Andale Mono, monospace;
+  background-color: #f8f8f8;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  line-height: 1.5;
+  font-size: 13px;
+}
+
+.preview pre code {
+  padding: 0;
+  word-wrap: normal;
+  white-space: pre-wrap;
+  background-color: transparent;
+  border: none;
+}
+
+.preview aside {
+  display: block;
+  float: right;
+  width: 390px;
+}
+
+.preview hr {
+  width: 540px;
+  text-align: left;
+  margin: 0 auto 0 0;
+  color: var(--secondary-dark-color);
+}
+
+.preview table {
+  margin: 0.75rem 0;
+  padding: 0;
+  border-collapse: collapse;
+  width: 100%; /* Ensure table takes full width */
+}
+
+.preview table tr {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid #ccc;
+  background-color: #fff;
+}
+
+.preview table tr:nth-child(2n) {
+  background-color: #f8f8f8;
+}
+
+.preview table tr th {
+  margin: 0;
+  padding: 0.35em 0.75em;
+  font-weight: bold;
+  text-align: left;
+  border: 1px solid #ccc;
+  background-color: var(
+    --note-selected-background-color
+  ); /* Added background color for table headers */
+  color: var(--dark-color); /* Ensure text color is readable */
+}
+
+.preview table tr td {
+  margin: 0;
+  padding: 0.35em 0.75em;
+  text-align: left;
+  border: 1px solid #ccc;
+}
+
+.preview table tr th :first-child,
+.preview table tr td :first-child {
+  margin-top: 0;
+}
+
+.preview table tr th :last-child,
+.preview table tr td :last-child {
+  margin-bottom: 0;
+}
