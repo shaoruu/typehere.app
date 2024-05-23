@@ -520,10 +520,23 @@ function App() {
         ? cmdKSearchQuery.substring(1)
         : cmdKSearchQuery;
     const relevantNotes = shouldSearchAllNotes ? database : workspaceNotes;
-    const notesToSearch = relevantNotes.filter(
-      (note) =>
-        shouldShowHiddenNotes || !note.isHidden || note.id === currentNoteId,
-    );
+    const notesToSearch = relevantNotes
+      .filter(
+        (note) =>
+          shouldShowHiddenNotes || !note.isHidden || note.id === currentNoteId,
+      )
+      .map((note) => {
+        const firstLineBreakIndex = note.content.trim().indexOf('\n');
+        return {
+          ...note,
+          firstLineWithWorkspace:
+            firstLineBreakIndex !== -1
+              ? note.content.slice(0, firstLineBreakIndex) +
+                (note.workspace ? ` (${note.workspace})` : '')
+              : note.content + (note.workspace ? ` ${note.workspace}` : ''),
+        };
+      });
+    console.log(notesToSearch);
     const hiddenNotesMatchLength = 5;
     // we're matching the entire database for easier access.
     const matchingHiddenNotes = database
@@ -549,9 +562,13 @@ function App() {
       );
 
     const notesFuse = new Fuse(notesToSearch, {
-      keys: [{ name: 'content', weight: 1 }],
+      keys: [
+        { name: 'content', weight: 1 },
+        { name: 'firstLineWithWorkspace', weight: 0.6 },
+      ],
       includeScore: true,
       threshold: 0.2,
+      useExtendedSearch: true,
     });
     const workspaceFuse = new Fuse(
       [
