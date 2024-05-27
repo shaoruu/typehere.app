@@ -700,7 +700,7 @@ function App() {
       processedCmdKSearchQuery,
     );
 
-    const actions: CmdKSuggestion[] = [
+    const prioritizedActions: CmdKSuggestion[] = [
       ...(processedCmdKSearchQuery
         ? [
             ...(workspaces.length > 0
@@ -718,7 +718,13 @@ function App() {
                   })),
                 ]
               : []),
+          ]
+        : []),
+    ];
 
+    const actions: CmdKSuggestion[] = [
+      ...(processedCmdKSearchQuery
+        ? [
             ...(regularCommandsResults.length > 0
               ? regularCommandsResults.map((result) => result.item)
               : []),
@@ -843,6 +849,7 @@ function App() {
         type: 'note' as const,
         note,
       })),
+      ...prioritizedActions,
       ...notes.map((note) => ({
         type: 'note' as const,
         note,
