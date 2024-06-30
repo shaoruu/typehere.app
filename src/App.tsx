@@ -510,7 +510,6 @@ function App() {
     note.isHidden = isHidden;
     setDatabase(sortNotes([...database.filter((n) => n.id !== note.id), note]));
   };
-
   const getAllSuggestions = (
     shouldSearchAllNotes = false,
   ): CmdKSuggestion[] => {
@@ -536,7 +535,6 @@ function App() {
               : note.content + (note.workspace ? ` ${note.workspace}` : ''),
         };
       });
-    console.log(notesToSearch);
     const hiddenNotesMatchLength = 5;
     // we're matching the entire database for easier access.
     const matchingHiddenNotes = database
@@ -1093,7 +1091,8 @@ function App() {
         e.code === 'Enter' &&
         (e.metaKey || e.ctrlKey) &&
         e.shiftKey &&
-        textValue.trim().length !== 0
+        textValue.trim().length !== 0 &&
+        !e.isComposing
       ) {
         e.preventDefault();
         openNewNote();
@@ -1228,7 +1227,6 @@ function App() {
       aceScroller.style.visibility = shouldShowScrollbar ? 'visible' : 'hidden';
     }
   }, [shouldShowScrollbar]);
-
   return (
     <main
       style={{
