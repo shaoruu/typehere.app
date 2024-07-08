@@ -1225,6 +1225,7 @@ function App() {
     const aceScroller = document.querySelector('.ace_scrollbar') as HTMLElement;
     if (aceScroller) {
       aceScroller.style.visibility = shouldShowScrollbar ? 'visible' : 'hidden';
+      document.body.classList.toggle('show-scrollbar', shouldShowScrollbar);
     }
   }, [shouldShowScrollbar]);
   return (

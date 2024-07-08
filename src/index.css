@@ -129,6 +129,12 @@ input {
   bottom: 0px;
   right: 0px;
   margin: 8px;
+  transition: right 0.3s ease;
+}
+
+/* Add this new rule */
+body.show-scrollbar #controls {
+  right: 16px; /* Adjust this value as needed */
 }
 
 #controls button {
