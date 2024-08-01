@@ -36,6 +36,7 @@
     "build": "tsc && vite build",
     "build:electron": "tsc && vite build --config electron-vite.config.ts && electron-builder",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "open": "open release/0.0.1/mac-arm64/",
     "preview": "vite preview"
   },
   "dependencies": {
