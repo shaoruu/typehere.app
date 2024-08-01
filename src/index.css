@@ -1,11 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+
 * {
   padding: 0px;
   margin: 0px;
   box-sizing: border-box;
-}
-
-*:not(.ace_content) {
-  font-family: monospace;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 /* Hide scrollbar for Webkit (Chrome, Safari) and IE, Edge, and Firefox */
