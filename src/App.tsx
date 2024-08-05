@@ -12,12 +12,6 @@ import { MdVisibilityOff } from 'react-icons/md';
 
 // Updated textsToReplace with additional text replacements for enhanced text processing
 const textsToReplace: [string | RegExp, string][] = [
-  [' -> ', ' → '],
-  [' <- ', ' ← '],
-  ['\n-> ', '\n→ '],
-  ['<- \n', '← \n'],
-  [/^-> /, '→ '],
-  [/^<- /, '← '],
   ['(c)', '©'],
   ['(r)', '®'],
   ['+-', '±'],
