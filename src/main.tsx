@@ -1,6 +1,5 @@
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
-import { Analytics } from '@vercel/analytics/react';
 
 import './index.css';
 
@@ -15,6 +14,7 @@ import 'ace-builds/src-noconflict/ext-searchbox';
 // @ts-expect-error sadly
 __START_REMOVE_FOR_ELECTRON__;
 import { registerSW } from 'virtual:pwa-register';
+import { NextAnalytics } from './Analytics.tsx';
 
 // add this to prompt for a refresh
 const updateSW = registerSW({
@@ -32,7 +32,7 @@ postMessage({ payload: 'removeLoading' }, '*');
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <>
-    <Analytics />
+    <NextAnalytics />
     <App />
   </>,
 );
