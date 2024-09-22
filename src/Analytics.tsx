@@ -1,11 +1,10 @@
 import { Analytics } from '@vercel/analytics/react';
+import isElectron from 'is-electron';
 
 export function NextAnalytics() {
-  // @ts-expect-error sadly
-  __START_REMOVE_FOR_ELECTRON__;
-  return <Analytics />;
-  // @ts-expect-error sadly
-  __END_REMOVE_FOR_ELECTRON__;
+  if (isElectron()) {
+    return null;
+  }
 
-  return null;
+  return <Analytics />;
 }
