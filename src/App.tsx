@@ -1,5 +1,4 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-// /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import LZString from 'lz-string';
@@ -7,6 +6,8 @@ import Fuse from 'fuse.js';
 import AceEditor from 'react-ace';
 import { FaMapPin } from 'react-icons/fa';
 import { MdVisibilityOff } from 'react-icons/md';
+import isElectron from 'is-electron';
+import './App.css';
 
 // import { LuLock, LuUnlock } from 'react-icons/lu';
 
@@ -1222,6 +1223,26 @@ function App() {
       document.body.classList.toggle('show-scrollbar', shouldShowScrollbar);
     }
   }, [shouldShowScrollbar]);
+
+  useEffect(() => {
+    if (!isElectron()) return;
+
+    const adjustTitleBarSize = () => {
+      const zoomLevel = window.devicePixelRatio;
+      const titleBar = document.querySelector('.custom-title-bar');
+      if (titleBar) {
+        (titleBar as HTMLElement).style.height = `${28 / zoomLevel}px`;
+      }
+    };
+
+    window.addEventListener('resize', adjustTitleBarSize);
+    adjustTitleBarSize(); // Initial adjustment
+
+    return () => {
+      window.removeEventListener('resize', adjustTitleBarSize);
+    };
+  }, []);
+
   return (
     <main
       style={{
@@ -1233,10 +1254,16 @@ function App() {
           : {}),
       }}
     >
+      {isElectron() && (
+        <div className="custom-title-bar">
+          <div className="traffic-light-placeholder"></div>
+          <div className="drag-region"></div>
+        </div>
+      )}
       <div
         style={{
           width: '100%',
-          height: '100vh',
+          height: isElectron() ? 'calc(100vh - 28px)' : '100vh', // Adjust height based on whether it's Electron
           padding: isNarrowScreen ? '0px' : '0 36px',
           ...(shouldShowScrollbar ? { paddingRight: '0px' } : {}),
         }}

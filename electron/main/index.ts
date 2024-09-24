@@ -69,6 +69,9 @@ async function createWindow() {
     y,
     width,
     height,
+    frame: false, // make the window frameless
+    titleBarStyle: 'hidden', // This hides the native title bar but keeps the traffic lights
+    trafficLightPosition: { x: 10, y: 8 }, // Adjust the position of traffic lights
     webPreferences: {
       preload,
       // Warning: Enable nodeIntegration and disable contextIsolation is not secure in production
@@ -102,7 +105,6 @@ async function createWindow() {
 
   win.on('close', () => {
     if (win) {
-      // @ts-expect-error some sort of electron typing bug?
       store.set('windowBounds', win.getBounds());
     }
   });
