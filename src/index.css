@@ -4,7 +4,7 @@
   padding: 0px;
   margin: 0px;
   box-sizing: border-box;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Berkeley Mono', 'JetBrains Mono', monospace;
 }
 
 /* Hide scrollbar for Webkit (Chrome, Safari) and IE, Edge, and Firefox */
