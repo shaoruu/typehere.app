@@ -306,7 +306,14 @@ function App() {
     }
   };
 
-  const openNote = (noteId: string, shouldFocus: boolean = true) => {
+  const [historyStack, setHistoryStack] = useState<string[]>([currentNoteId]);
+  const [historyIndex, setHistoryIndex] = useState<number>(0);
+
+  const openNote = (
+    noteId: string,
+    shouldFocus: boolean = true,
+    shouldUpdateHistory: boolean = true,
+  ) => {
     if (!noteId || !database.find((n) => n.id === noteId)) {
       return;
     }
@@ -336,6 +343,16 @@ function App() {
           editor.moveCursorTo(0, 0);
         }
       }, 10);
+    }
+
+    if (shouldUpdateHistory) {
+      if (historyStack[historyIndex] !== noteId) {
+        // Discard forward history if any
+        const newHistoryStack = historyStack.slice(0, historyIndex + 1);
+        newHistoryStack.push(noteId);
+        setHistoryStack(newHistoryStack);
+        setHistoryIndex(newHistoryStack.length - 1);
+      }
     }
   };
 
@@ -1101,6 +1118,22 @@ function App() {
           aceEditorRef.current?.editor.focus();
         }
       }
+
+      if (e.metaKey && e.code === 'BracketLeft') {
+        e.preventDefault();
+        if (historyIndex > 0) {
+          const prevIndex = historyIndex - 1;
+          setHistoryIndex(prevIndex);
+          openNote(historyStack[prevIndex], true, false);
+        }
+      } else if (e.metaKey && e.code === 'BracketRight') {
+        e.preventDefault();
+        if (historyIndex < historyStack.length - 1) {
+          const nextIndex = historyIndex + 1;
+          setHistoryIndex(nextIndex);
+          openNote(historyStack[nextIndex], true, false);
+        }
+      }
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
@@ -1165,6 +1198,8 @@ function App() {
     pinNote,
     setIsNoteHidden,
     shouldShowHiddenNotes,
+    historyIndex,
+    historyStack,
   ]);
 
   useEffect(() => {
