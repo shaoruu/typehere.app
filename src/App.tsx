@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import LZString from 'lz-string';
 import Fuse from 'fuse.js';
@@ -9,9 +9,6 @@ import { MdVisibilityOff } from 'react-icons/md';
 import isElectron from 'is-electron';
 import './App.css';
 
-// import { LuLock, LuUnlock } from 'react-icons/lu';
-
-// Updated textsToReplace with additional text replacements for enhanced text processing
 const textsToReplace: [string | RegExp, string][] = [
   ['(c)', '©'],
   ['(r)', '®'],
@@ -20,77 +17,284 @@ const textsToReplace: [string | RegExp, string][] = [
 
 const digitCount = 5;
 
-function usePersistentState<T>(
-  storageKey: string,
-  defaultValue?: T,
-  shouldListenToChange = true,
-) {
-  const [data, setData] = useState<T>(() => {
-    const localStorageData = localStorage.getItem(storageKey);
+const DB_NAME = 'typehere-db';
+const STORE_NAME = 'app-state';
 
-    try {
-      return localStorageData ? JSON.parse(localStorageData) : defaultValue;
-    } catch (e) {
-      console.error('Failed to parse local storage data', e);
-      return defaultValue;
-    }
-  });
+interface DBSchema {
+  version: number;
+  stores: string[];
+}
 
-  // Function to save data to localStorage
-  const saveData = (dataToSave: T) => {
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(dataToSave));
-    } catch (e) {
-      console.error('Failed to save data to local storage', e);
-    }
-  };
+type Migration = {
+  version: number;
+  migrate: (db: IDBDatabase, transaction: IDBTransaction) => void;
+};
 
-  useEffect(() => {
-    if (!shouldListenToChange) return;
-
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === storageKey) {
-        setData(event.newValue ? JSON.parse(event.newValue) : defaultValue);
+const migrations: Migration[] = [
+  {
+    version: 1,
+    migrate: (db, transaction) => {
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        console.log('Creating object store:', STORE_NAME);
+        db.createObjectStore(STORE_NAME);
       }
+      const store = transaction.objectStore(STORE_NAME);
+      store.put({ version: 1, stores: [STORE_NAME] }, 'db_schema');
+    },
+  },
+];
+
+// Update DB_VERSION automatically based on migrations
+const DB_VERSION_LATEST = Math.max(...migrations.map((m) => m.version));
+
+async function initDB() {
+  if (!window.indexedDB) {
+    console.error("Your browser doesn't support IndexedDB");
+    return Promise.reject(new Error('IndexedDB not supported'));
+  }
+
+  return new Promise<IDBDatabase>((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION_LATEST);
+
+    request.onerror = () => {
+      console.error('Database error:', request.error);
+      reject(request.error);
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [storageKey, defaultValue, shouldListenToChange]);
-
-  // Debounce function to limit the rate at which the function can fire
-  const debounce = (func: (dataToSave: T) => void, delay: number) => {
-    let timer: number;
-    return (dataToSave: T) => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        func(dataToSave);
-      }, delay);
+    request.onblocked = () => {
+      console.warn(
+        'Database blocked. Please close other tabs with this app open',
+      );
+      reject(new Error('Database blocked'));
     };
+
+    request.onsuccess = () => {
+      const db = request.result;
+      db.onerror = (event: Event) => {
+        const target = event.target as IDBRequest;
+        console.error('Database error:', target.error);
+      };
+      resolve(db);
+    };
+
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      const transaction = (event.target as IDBOpenDBRequest).transaction;
+      const oldVersion = event.oldVersion;
+
+      if (!transaction) {
+        console.error('No transaction available for migration');
+        return;
+      }
+
+      console.log(
+        `Running migrations from version ${oldVersion} to ${DB_VERSION_LATEST}`,
+      );
+
+      // Run all needed migrations in order
+      migrations
+        .filter((migration) => migration.version > oldVersion)
+        .sort((a, b) => a.version - b.version)
+        .forEach((migration) => {
+          console.log(`Applying migration to version ${migration.version}`);
+          migration.migrate(db, transaction);
+        });
+    };
+  });
+}
+
+async function getFromDB<T>(key: string): Promise<T | undefined> {
+  try {
+    const db = await initDB();
+
+    if (!db.objectStoreNames.contains(STORE_NAME)) {
+      console.warn('Store not found, reinitializing database...');
+      db.close();
+      await new Promise((resolve, reject) => {
+        const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
+        deleteRequest.onsuccess = () => resolve(undefined);
+        deleteRequest.onerror = () => reject(deleteRequest.error);
+      });
+      return getFromDB(key);
+    }
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.get(key);
+
+      transaction.onerror = () => {
+        console.error('Transaction error:', transaction.error);
+        reject(transaction.error);
+      };
+
+      request.onerror = () => {
+        console.error('Read error:', request.error);
+        reject(request.error);
+      };
+
+      request.onsuccess = () => resolve(request.result);
+    });
+  } catch (error) {
+    console.error('Failed to read from IndexedDB:', error);
+    return undefined;
+  }
+}
+
+async function setInDB<T>(key: string, value: T): Promise<void> {
+  try {
+    const db = await initDB();
+
+    if (!db.objectStoreNames.contains(STORE_NAME)) {
+      console.warn('Store not found, reinitializing database...');
+      db.close();
+      await new Promise((resolve, reject) => {
+        const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
+        deleteRequest.onsuccess = () => resolve(undefined);
+        deleteRequest.onerror = () => reject(deleteRequest.error);
+      });
+      return setInDB(key, value);
+    }
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.put(value, key);
+
+      transaction.onerror = () => {
+        console.error('Transaction error:', transaction.error);
+        reject(transaction.error);
+      };
+
+      request.onerror = () => {
+        console.error('Write error:', request.error);
+        reject(request.error);
+      };
+
+      transaction.oncomplete = () => resolve();
+      request.onsuccess = () => resolve();
+    });
+  } catch (error) {
+    console.error('Failed to write to IndexedDB:', error);
+    // Fallback to localStorage if IndexedDB fails
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+      console.error('Failed to write to localStorage:', e);
+    }
+  }
+}
+
+function debounce<T extends (...args: Parameters<T>) => ReturnType<T>>(
+  func: T,
+  wait: number,
+): {
+  (...args: Parameters<T>): void;
+  cancel: () => void;
+} {
+  let timeout: number | undefined;
+
+  const debouncedFn = function (this: unknown, ...args: Parameters<T>) {
+    if (timeout) window.clearTimeout(timeout);
+    timeout = window.setTimeout(() => func.apply(this, args), wait);
   };
 
-  const saveDataDebounced = debounce(saveData, 100); // Adjust the delay as needed
+  debouncedFn.cancel = () => {
+    if (timeout) window.clearTimeout(timeout);
+  };
 
+  return debouncedFn;
+}
+
+function usePersistentState<
+  T extends string | number | boolean | object | null,
+>(storageKey: string, defaultValue: T) {
+  const [data, setData] = useState<T>(defaultValue);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load initial data
   useEffect(() => {
-    // Save data when the component is about to unmount or page is about to be closed
-    const handleBeforeUnload = () => {
-      saveData(data);
-    };
+    let isMounted = true;
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    async function loadInitialData() {
+      try {
+        let value: T | undefined = await getFromDB<T>(storageKey);
+
+        if (value === undefined) {
+          try {
+            const localStorageData = localStorage.getItem(storageKey);
+            if (localStorageData) {
+              value = JSON.parse(localStorageData) as T;
+              await setInDB(storageKey, value);
+              localStorage.removeItem(storageKey);
+            } else {
+              value = defaultValue;
+              await setInDB(storageKey, value);
+            }
+          } catch (e) {
+            console.error('Failed to process localStorage data:', e);
+            value = defaultValue;
+            await setInDB(storageKey, value);
+          }
+        }
+
+        if (isMounted) {
+          setData(value);
+        }
+      } catch (e) {
+        console.error('Failed to load data:', e);
+        if (isMounted) {
+          setData(defaultValue);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadInitialData();
 
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      isMounted = false;
     };
-  }, [data]);
+  }, [storageKey, defaultValue]);
 
-  return [
-    data,
+  // Debounced save function
+  const debouncedSave = useMemo(
+    () =>
+      debounce(async (value: T) => {
+        try {
+          await setInDB(storageKey, value);
+        } catch (e) {
+          console.error('Failed to save data:', e);
+        }
+      }, 200),
+    [storageKey],
+  );
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      debouncedSave.cancel();
+    };
+  }, [debouncedSave]);
+
+  // Modified setter function
+  const setPersistedData = useCallback(
     (newData: T) => {
       setData(newData);
-      saveDataDebounced(newData);
+      debouncedSave(newData);
     },
-  ] as const;
+    [debouncedSave],
+  );
+
+  // Return loading state if data hasn't been loaded yet
+  if (isLoading) {
+    return [defaultValue, setPersistedData] as const;
+  }
+
+  return [data ?? defaultValue, setPersistedData] as const;
 }
 
 const searchAllNotesKeys = ['@', '>'];
@@ -132,7 +336,12 @@ const freshDatabase = [
   },
 ];
 
-async function backupDataToSafeLocation(data: unknown) {
+type BackupEntry = {
+  date: string;
+  data: Note[];
+};
+
+async function backupDataToSafeLocation(data: Note[]): Promise<void> {
   if (!('indexedDB' in window)) {
     console.error("This browser doesn't support IndexedDB");
     return;
@@ -147,7 +356,7 @@ async function backupDataToSafeLocation(data: unknown) {
     }
   };
 
-  dbRequest.onerror = (event) => {
+  dbRequest.onerror = (event: Event) => {
     console.error('Error opening IndexedDB for backup', event);
   };
 
@@ -155,19 +364,26 @@ async function backupDataToSafeLocation(data: unknown) {
     const db = (event.target as IDBOpenDBRequest).result;
     const transaction = db.transaction('backups', 'readwrite');
     const store = transaction.objectStore('backups');
-    const request = store.add({ date: new Date().toISOString(), data });
+    const backupEntry: BackupEntry = {
+      date: new Date().toISOString(),
+      data,
+    };
+    const request = store.add(backupEntry);
 
     request.onsuccess = () => {
       console.log('Data backed up successfully in IndexedDB');
     };
 
-    request.onerror = (event) => {
+    request.onerror = (event: Event) => {
       console.error('Error backing up data in IndexedDB', event);
     };
   };
 }
 
-function usePeriodicBackup<T>(data: T, interval: number = 24 * 60 * 60 * 1000) {
+function usePeriodicBackup(
+  data: Note[],
+  interval: number = 24 * 60 * 60 * 1000,
+): void {
   useEffect(() => {
     const lastBackupDateStr = localStorage.getItem('lastBackupDate');
     const lastBackupDate = lastBackupDateStr
@@ -195,10 +411,57 @@ if (localStorage.getItem(themeId) === '"dark"') {
 }
 
 const sortNotes = (notes: Note[]) => {
+  if (!notes || notes.length === 0) return [];
   return notes.sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
   );
 };
+
+// Helper function to check current schema version - now uses direct IndexedDB access
+async function getCurrentSchema(): Promise<DBSchema | undefined> {
+  return new Promise<DBSchema | undefined>((resolve) => {
+    const request = indexedDB.open(DB_NAME);
+
+    request.onerror = () => {
+      console.error('Failed to open DB for schema check:', request.error);
+      resolve(undefined);
+    };
+
+    request.onsuccess = () => {
+      const db = request.result;
+      try {
+        const transaction = db.transaction(STORE_NAME, 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        const schemaRequest = store.get('db_schema');
+
+        schemaRequest.onerror = () => {
+          console.error('Failed to get schema:', schemaRequest.error);
+          db.close();
+          resolve(undefined);
+        };
+
+        schemaRequest.onsuccess = () => {
+          db.close();
+          resolve(schemaRequest.result);
+        };
+      } catch (error) {
+        console.error('Error accessing schema:', error);
+        db.close();
+        resolve(undefined);
+      }
+    };
+  });
+}
+
+// Add a function to check and log schema version - useful for debugging
+async function checkSchemaVersion() {
+  const schema = await getCurrentSchema();
+  console.log('Current schema version:', schema?.version || 'not set');
+  return schema;
+}
+
+// Call it when the app starts
+checkSchemaVersion().catch(console.error);
 
 function App() {
   const textareaDomRef = useRef<HTMLTextAreaElement>(null);
@@ -213,16 +476,13 @@ function App() {
 
   const [currentWorkspace, setCurrentWorkspace] = usePersistentState<
     string | null
-  >('typehere-currentWorkspace', null, false);
+  >('typehere-currentWorkspace', null);
   const [currentNoteId, setCurrentNoteId] = usePersistentState<string>(
     'typehere-currentNoteId',
     freshDatabase[0].id,
-    false,
   );
-  const [shouldShowScrollbar, setShouldShowScrollbar] = usePersistentState(
-    'typehere-shouldShowScrollbar',
-    false,
-  );
+  const [shouldShowScrollbar, setShouldShowScrollbar] =
+    usePersistentState<boolean>('typehere-shouldShowScrollbar', false);
   const [moreMenuPosition, setMoreMenuPosition] = useState<{
     x: number;
     y: number;
@@ -237,9 +497,9 @@ function App() {
 
   const workspaceNotes = useMemo(() => {
     return currentWorkspace === null
-      ? sortNotes(database)
+      ? sortNotes(database ?? [])
       : sortNotes(
-          database.filter(
+          (database ?? []).filter(
             (n) => n.workspace === currentWorkspace || n.isPinned,
           ),
         );
@@ -248,7 +508,7 @@ function App() {
   const availableWorkspaces = useMemo(() => {
     const seenWorkspaces = new Set<string>();
     const allWorkspaces: string[] = [];
-    const shallowDatabase = sortNotes([...database]);
+    const shallowDatabase = sortNotes([...(database ?? [])]);
 
     for (const note of shallowDatabase) {
       if (!note.workspace || seenWorkspaces.has(note.workspace)) {
@@ -272,11 +532,11 @@ function App() {
     );
     if (currentNote) {
       setTextValue(currentNote.content);
-    } else {
+    } else if (workspaceNotes.length > 0) {
       setCurrentNoteId(workspaceNotes[0].id);
       setTextValue(workspaceNotes[0].content);
     }
-  }, [currentNoteId, workspaceNotes, setCurrentNoteId]);
+  }, [workspaceNotes, currentNoteId]);
 
   const focus = () => {
     if (aceEditorRef.current) {
@@ -293,10 +553,9 @@ function App() {
   };
 
   const deleteNote = (noteId: string) => {
-    const deletedNote = database.find((note) => note.id === noteId);
-    if (!deletedNote) return;
+    const deletedNote = database?.find((note) => note.id === noteId);
+    if (!deletedNote || !database) return;
     setFreshlyDeletedNotes((prev) => [...prev, deletedNote]);
-    // only keep the last 10 deleted notes
     setDeletedNotesBackup([...deletedNotesBackup, deletedNote].slice(-10));
     const updatedDatabase = database.filter((note) => note.id !== noteId);
     setDatabase(updatedDatabase);
@@ -306,7 +565,9 @@ function App() {
     }
   };
 
-  const [historyStack, setHistoryStack] = useState<string[]>([currentNoteId]);
+  const [historyStack, setHistoryStack] = useState<string[]>([
+    currentNoteId ?? '',
+  ]);
   const [historyIndex, setHistoryIndex] = useState<number>(0);
 
   const openNote = (
@@ -314,14 +575,14 @@ function App() {
     shouldFocus: boolean = true,
     shouldUpdateHistory: boolean = true,
   ) => {
-    if (!noteId || !database.find((n) => n.id === noteId)) {
+    if (!noteId || !database?.find((n) => n.id === noteId)) {
       return;
     }
 
     setLastAceCursorPosition({ row: 0, column: 0 });
     setCurrentNoteId(noteId);
 
-    const n = database.find((n) => n.id === noteId);
+    const n = database?.find((n) => n.id === noteId);
     if (n) {
       n.updatedAt = new Date().toISOString();
     }
@@ -330,7 +591,7 @@ function App() {
       setCurrentWorkspace(n.workspace ?? null);
     }
 
-    setDatabase(database);
+    setDatabase(database ?? []);
 
     if (shouldFocus) {
       setTimeout(() => {
@@ -389,8 +650,11 @@ function App() {
   const [cmdKSearchQuery, setCmdKSearchQuery] = useState('');
   const [isCmdKMenuOpen, setIsCmdKMenuOpen] = useState(false);
   const [hasVimNavigated, setHasVimNavigated] = useState(false);
-  const [isUsingVim, setIsUsingVim] = usePersistentState('typehere-vim', false);
-  const [isNarrowScreen, setIsNarrowScreen] = usePersistentState(
+  const [isUsingVim, setIsUsingVim] = usePersistentState<boolean>(
+    'typehere-vim',
+    false,
+  );
+  const [isNarrowScreen, setIsNarrowScreen] = usePersistentState<boolean>(
     'typehere-narrow',
     false,
   );
@@ -422,7 +686,7 @@ function App() {
 
   const moveNoteToWorkspace = (note: Note, workspace?: string) => {
     note.workspace = workspace;
-    setDatabase(database);
+    setDatabase(database ?? []);
     setCurrentWorkspace(workspace ?? null);
     setSelectedCmdKSuggestionIndex(0);
     openNote(note.id, false);
@@ -440,7 +704,7 @@ function App() {
   };
 
   const getNextWorkspace = (direction: 'left' | 'right') => {
-    const currentIndex = navigableWorkspaces.indexOf(currentWorkspace);
+    const currentIndex = navigableWorkspaces.indexOf(currentWorkspace ?? null);
     if (currentIndex === -1) {
       console.warn('wtf?'); // not supposed to happen
     } else {
@@ -499,6 +763,8 @@ function App() {
         }
       });
     }
+
+    if (!database) return;
 
     const noteIndex = database.findIndex((n) => n.id === noteId);
     if (noteIndex !== -1) {
@@ -1622,7 +1888,7 @@ function App() {
 
                     return (
                       <div
-                        key={note.id}
+                        key={`note-${note.id}-${index}`}
                         id={`note-list-cmdk-item-${index}`}
                         className="note-list-item"
                         onClick={() => {
@@ -1734,6 +2000,7 @@ function App() {
 
                   return (
                     <div
+                      key={`action-${title}-${index}`}
                       id={`note-list-cmdk-item-${index}`}
                       className="note-list-item"
                       onClick={onAction}

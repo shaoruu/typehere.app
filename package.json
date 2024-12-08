@@ -27,7 +27,10 @@
       "icon": "icons/icon.icns",
       "target": [
         "dmg"
-      ]
+      ],
+      "notarize": false,
+      "hardenedRuntime": false,
+      "identity": null
     }
   },
   "scripts": {
