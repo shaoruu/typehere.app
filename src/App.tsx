@@ -1906,8 +1906,6 @@ function App() {
                           <div
                             className="note-list-item-title"
                             style={{
-                              fontWeight:
-                                note.id === currentNoteId ? 'bold' : 'normal',
                               fontStyle: title ? 'normal' : 'italic',
                               color: title
                                 ? 'var(--dark-color)'
