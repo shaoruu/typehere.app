@@ -113,7 +113,7 @@ input {
   overflow: auto;
   border: none;
   padding: 2rem;
-  font-size: 1.5rem;
+  font-size: 1;
   resize: none;
   line-height: 1.5;
   color: var(--dark-color);

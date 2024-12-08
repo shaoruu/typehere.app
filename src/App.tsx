@@ -1620,6 +1620,7 @@ function App() {
             style={{
               color: 'var(--dark-color)',
               opacity: 0.5,
+              fontSize: '0.8rem',
             }}
           >
             [{currentWorkspace}]
