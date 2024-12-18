@@ -463,6 +463,17 @@ async function checkSchemaVersion() {
 // Call it when the app starts
 checkSchemaVersion().catch(console.error);
 
+const getCurrentTime = () => {
+  const now = new Date();
+  const month = now.toLocaleString('default', { month: 'short' }).toLowerCase();
+  const day = now.getDate();
+  const hour = now.getHours();
+  const minute = now.getMinutes().toString().padStart(2, '0');
+  const period = hour >= 12 ? 'p' : 'a';
+  const hour12 = hour % 12 || 12;
+  return `${month}${day}, ${hour12}:${minute}${period}`;
+};
+
 function App() {
   const textareaDomRef = useRef<HTMLTextAreaElement>(null);
   const cmdKInputDomRef = useRef<HTMLInputElement>(null);
@@ -1544,6 +1555,16 @@ function App() {
     };
   }, []);
 
+  const [currentTime, setCurrentTime] = useState(getCurrentTime());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(getCurrentTime());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <main
       style={{
@@ -1615,17 +1636,15 @@ function App() {
         />
       </div>
       <div id="controls">
-        {currentWorkspace && (
-          <div
-            style={{
-              color: 'var(--dark-color)',
-              opacity: 0.5,
-              fontSize: '0.8rem',
-            }}
-          >
-            [{currentWorkspace}]
-          </div>
-        )}
+        <div
+          style={{
+            color: 'var(--dark-color)',
+            opacity: 0.5,
+            fontSize: '0.8rem',
+          }}
+        >
+          {currentWorkspace && `[${currentWorkspace}] `}[{currentTime}]
+        </div>
         <button
           onClick={() => {
             setIsHelpMenuOpen(true);
