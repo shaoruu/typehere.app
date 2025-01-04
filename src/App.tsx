@@ -336,11 +336,6 @@ const freshDatabase = [
   },
 ];
 
-type BackupEntry = {
-  date: string;
-  data: Note[];
-};
-
 async function backupDataToSafeLocation(data: Note[]): Promise<void> {
   if (!('indexedDB' in window)) {
     console.error("This browser doesn't support IndexedDB");
@@ -351,33 +346,61 @@ async function backupDataToSafeLocation(data: Note[]): Promise<void> {
 
   dbRequest.onupgradeneeded = (event) => {
     const db = (event.target as IDBOpenDBRequest).result;
-    if (!db.objectStoreNames.contains('backups')) {
-      db.createObjectStore('backups', { autoIncrement: true });
+    // Delete old object store if it exists
+    if (db.objectStoreNames.contains('backups')) {
+      db.deleteObjectStore('backups');
     }
+    // Create new object store with index
+    const store = db.createObjectStore('backups', { keyPath: 'date' });
+    store.createIndex('dateIndex', 'date', { unique: false });
   };
 
-  dbRequest.onerror = (event: Event) => {
-    console.error('Error opening IndexedDB for backup', event);
-  };
-
-  dbRequest.onsuccess = (event) => {
-    const db = (event.target as IDBOpenDBRequest).result;
-    const transaction = db.transaction('backups', 'readwrite');
-    const store = transaction.objectStore('backups');
-    const backupEntry: BackupEntry = {
-      date: new Date().toISOString(),
-      data,
-    };
-    const request = store.add(backupEntry);
-
-    request.onsuccess = () => {
-      console.log('Data backed up successfully in IndexedDB');
+  return new Promise((resolve, reject) => {
+    dbRequest.onerror = () => {
+      console.error('Error opening IndexedDB for backup', dbRequest.error);
+      reject(dbRequest.error);
     };
 
-    request.onerror = (event: Event) => {
-      console.error('Error backing up data in IndexedDB', event);
+    dbRequest.onsuccess = () => {
+      const db = dbRequest.result;
+      const transaction = db.transaction('backups', 'readwrite');
+      const store = transaction.objectStore('backups');
+
+      // Cleanup old backups first
+      store.getAllKeys().onsuccess = (event) => {
+        const keys = (event.target as IDBRequest).result as string[];
+        if (keys.length >= 5) {
+          // Sort keys by date and keep only the latest 4
+          keys
+            .sort()
+            .slice(0, -4)
+            .forEach((key) => {
+              store.delete(key);
+            });
+        }
+      };
+
+      const backupEntry = {
+        date: new Date().toISOString(),
+        data: data.map((note) => ({
+          ...note,
+          content: note.content.slice(0, 10000), // Limit content size
+        })),
+      };
+
+      const request = store.put(backupEntry);
+
+      request.onerror = () => {
+        console.error('Error backing up data in IndexedDB', request.error);
+        reject(request.error);
+      };
+
+      transaction.oncomplete = () => {
+        db.close();
+        resolve();
+      };
     };
-  };
+  });
 }
 
 function usePeriodicBackup(
@@ -385,23 +408,35 @@ function usePeriodicBackup(
   interval: number = 24 * 60 * 60 * 1000,
 ): void {
   useEffect(() => {
+    let isBackupInProgress = false;
     const lastBackupDateStr = localStorage.getItem('lastBackupDate');
     const lastBackupDate = lastBackupDateStr
       ? new Date(lastBackupDateStr)
       : new Date(0);
     const now = new Date();
 
+    const performBackup = async () => {
+      if (isBackupInProgress) return;
+      isBackupInProgress = true;
+      try {
+        await backupDataToSafeLocation(data);
+        localStorage.setItem('lastBackupDate', new Date().toISOString());
+      } catch (error) {
+        console.error('Backup failed:', error);
+      } finally {
+        isBackupInProgress = false;
+      }
+    };
+
     if (now.getTime() - lastBackupDate.getTime() > interval) {
-      backupDataToSafeLocation(data);
-      localStorage.setItem('lastBackupDate', now.toISOString());
+      performBackup();
     }
 
-    const intervalId = setInterval(() => {
-      backupDataToSafeLocation(data);
-      localStorage.setItem('lastBackupDate', new Date().toISOString());
-    }, interval);
+    const intervalId = setInterval(performBackup, interval);
 
-    return () => clearInterval(intervalId);
+    return () => {
+      clearInterval(intervalId);
+    };
   }, [data, interval]);
 }
 
@@ -1491,11 +1526,18 @@ function App() {
     if (aceEditorRef.current) {
       const editor = aceEditorRef.current.editor;
       editor.renderer.setScrollMargin(32, 32, 0, 0);
-      // editor.commands.removeCommand('find');
       editor.commands.removeCommand('findprevious');
       editor.commands.removeCommand('findnext');
       editor.commands.removeCommand('removetolineend');
       editor.getSession().setOption('indentedSoftWrap', false);
+
+      // Memory optimizations
+      editor.setOption('enableBasicAutocompletion', false);
+      editor.setOption('enableLiveAutocompletion', false);
+      editor.setOption('enableSnippets', false);
+      editor.getSession().setUseWorker(false); // Disable worker thread
+      editor.renderer.setShowGutter(false);
+      editor.renderer.setShowPrintMargin(false);
       editor.resize();
     }
   }, []);
@@ -1641,9 +1683,13 @@ function App() {
             color: 'var(--dark-color)',
             opacity: 0.5,
             fontSize: '0.8rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
           }}
         >
-          {currentWorkspace && `[${currentWorkspace}] `}[{currentTime}]
+          {currentWorkspace && <span>[{currentWorkspace}]</span>}
+          <span>[{currentTime}]</span>
         </div>
         <button
           onClick={() => {
