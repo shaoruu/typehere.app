@@ -948,6 +948,20 @@ function App() {
       },
       {
         type: 'action',
+        title: 'pin/unpin current note',
+        content: currentNote?.isPinned
+          ? 'unpin from all workspaces'
+          : 'pin to all workspaces',
+        color: '#FF9800', // Orange
+        onAction: () => {
+          if (!currentNote) return true;
+          pinNote(currentNote, !currentNote.isPinned);
+          setCmdKSearchQuery('');
+          return false;
+        },
+      },
+      {
+        type: 'action',
         title: 'toggle vim mode',
         content: 'turn ' + (isUsingVim ? 'off' : 'on') + ' vim mode',
         color: '#81D4FA', // A calming light blue
