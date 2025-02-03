@@ -142,8 +142,9 @@ async function getFromDB<T>(key: string): Promise<T | undefined> {
 }
 
 async function setInDB<T>(key: string, value: T): Promise<void> {
+  let db: IDBDatabase | null = null;
   try {
-    const db = await initDB();
+    db = await initDB();
 
     if (!db.objectStoreNames.contains(STORE_NAME)) {
       console.warn('Store not found, reinitializing database...');
@@ -157,25 +158,34 @@ async function setInDB<T>(key: string, value: T): Promise<void> {
     }
 
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const transaction = db!.transaction(STORE_NAME, 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
       const request = store.put(value, key);
 
       transaction.onerror = () => {
         console.error('Transaction error:', transaction.error);
+        db?.close();
         reject(transaction.error);
       };
 
       request.onerror = () => {
         console.error('Write error:', request.error);
+        db?.close();
         reject(request.error);
       };
 
-      transaction.oncomplete = () => resolve();
-      request.onsuccess = () => resolve();
+      transaction.oncomplete = () => {
+        db?.close();
+        resolve();
+      };
+
+      request.onsuccess = () => {
+        // Don't resolve here, wait for transaction complete
+      };
     });
   } catch (error) {
     console.error('Failed to write to IndexedDB:', error);
+    if (db) db.close();
     // Fallback to localStorage if IndexedDB fails
     try {
       localStorage.setItem(key, JSON.stringify(value));
@@ -409,6 +419,7 @@ function usePeriodicBackup(
 ): void {
   useEffect(() => {
     let isBackupInProgress = false;
+    let isMounted = true;
     const lastBackupDateStr = localStorage.getItem('lastBackupDate');
     const lastBackupDate = lastBackupDateStr
       ? new Date(lastBackupDateStr)
@@ -416,11 +427,13 @@ function usePeriodicBackup(
     const now = new Date();
 
     const performBackup = async () => {
-      if (isBackupInProgress) return;
+      if (isBackupInProgress || !isMounted) return;
       isBackupInProgress = true;
       try {
         await backupDataToSafeLocation(data);
-        localStorage.setItem('lastBackupDate', new Date().toISOString());
+        if (isMounted) {
+          localStorage.setItem('lastBackupDate', new Date().toISOString());
+        }
       } catch (error) {
         console.error('Backup failed:', error);
       } finally {
@@ -435,7 +448,10 @@ function usePeriodicBackup(
     const intervalId = setInterval(performBackup, interval);
 
     return () => {
+      isMounted = false;
       clearInterval(intervalId);
+      // If a backup is in progress, we'll let it finish naturally
+      // but won't update localStorage due to isMounted check
     };
   }, [data, interval]);
 }
@@ -1621,6 +1637,27 @@ function App() {
     return () => clearInterval(timer);
   }, []);
 
+  // Add cleanup for Ace editor and database connections
+  useEffect(() => {
+    return () => {
+      // Cleanup Ace editor
+      if (aceEditorRef.current) {
+        const editor = aceEditorRef.current.editor;
+        editor.destroy();
+        editor.container.remove();
+      }
+
+      // Force close any open IndexedDB connections
+      if (window.indexedDB) {
+        const request = window.indexedDB.open(DB_NAME);
+        request.onsuccess = (event) => {
+          const db = (event.target as IDBOpenDBRequest).result;
+          db.close();
+        };
+      }
+    };
+  }, []);
+
   return (
     <main
       style={{
@@ -1705,13 +1742,6 @@ function App() {
           {currentWorkspace && <span>[{currentWorkspace}]</span>}
           <span>[{currentTime}]</span>
         </div>
-        <button
-          onClick={() => {
-            setIsHelpMenuOpen(true);
-          }}
-        >
-          ?
-        </button>
         {isHelpMenuOpen &&
           createPortal(
             <>
@@ -1874,6 +1904,11 @@ function App() {
                   scrollbar
                 </span>
               </button> */}
+              {textValue && (
+                <button tabIndex={-1} onClick={() => openNewNote('')}>
+                  new
+                </button>
+              )}
               <div
                 style={{
                   height: '1px',
@@ -1888,13 +1923,11 @@ function App() {
               >
                 <button tabIndex={-1}>github</button>
               </a>
+              <button tabIndex={-1} onClick={() => setIsHelpMenuOpen(true)}>
+                how
+              </button>
             </div>
           </>
-        )}
-        {textValue && (
-          <button tabIndex={-1} onClick={() => openNewNote('')}>
-            new
-          </button>
         )}
       </div>
       {isCmdKMenuOpen &&

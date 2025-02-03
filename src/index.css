@@ -7,6 +7,12 @@
   font-family: 'Berkeley Mono', 'JetBrains Mono', monospace;
 }
 
+.ace_comment,
+.ace_placeholder {
+  font-family: 'Berkeley Mono', 'JetBrains Mono', monospace !important;
+  padding: 0px 8px !important;
+}
+
 /* Hide scrollbar for Webkit (Chrome, Safari) and IE, Edge, and Firefox */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
@@ -61,7 +67,7 @@
   --keyboard-key-color: rgba(40, 40, 33, 0.836);
   --dark-color: #ffffff;
   --secondary-dark-color: #555;
-  --light-color: #000000;
+  --light-color: #121212;
   --on-fill-color: #ffffff;
   --pin-color: #fda403;
   --hidden-color: #5fb2ee78;
@@ -234,7 +240,7 @@ body.show-scrollbar #controls {
   display: flex;
   flex-direction: column;
   padding: 2px;
-  gap: 4px;
+  gap: 2px;
   position: fixed;
   right: 0;
   bottom: 0;
