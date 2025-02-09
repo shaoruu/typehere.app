@@ -38,3 +38,4 @@ I used to use typehere.co a lot until the site was taken down, so I created [typ
 - Everything client-side, all in `localStorage`
 - Periodically backed up to `indexedDB` (also in your browser)
 - Import/export notes
+- Desktop app (build on own machine)
