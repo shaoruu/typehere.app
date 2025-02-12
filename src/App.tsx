@@ -47,10 +47,46 @@ const migrations: Migration[] = [
 // Update DB_VERSION automatically based on migrations
 const DB_VERSION_LATEST = Math.max(...migrations.map((m) => m.version));
 
+// Add connection pooling
+const DB_CONNECTION_POOL: { [key: string]: IDBDatabase } = {};
+const MAX_POOL_SIZE = 5;
+
+function getConnectionFromPool(dbName: string): IDBDatabase | undefined {
+  return DB_CONNECTION_POOL[dbName];
+}
+
+function addConnectionToPool(dbName: string, connection: IDBDatabase) {
+  // If pool is full, close the oldest connection
+  const poolKeys = Object.keys(DB_CONNECTION_POOL);
+  if (poolKeys.length >= MAX_POOL_SIZE) {
+    const oldestKey = poolKeys[0];
+    DB_CONNECTION_POOL[oldestKey].close();
+    delete DB_CONNECTION_POOL[oldestKey];
+  }
+  DB_CONNECTION_POOL[dbName] = connection;
+}
+
+function closeAllConnections() {
+  Object.values(DB_CONNECTION_POOL).forEach(db => {
+    try {
+      db.close();
+    } catch (e) {
+      console.error('Error closing DB connection:', e);
+    }
+  });
+  Object.keys(DB_CONNECTION_POOL).forEach(key => delete DB_CONNECTION_POOL[key]);
+}
+
 async function initDB() {
   if (!window.indexedDB) {
     console.error("Your browser doesn't support IndexedDB");
     return Promise.reject(new Error('IndexedDB not supported'));
+  }
+
+  // Check pool first
+  const existingConnection = getConnectionFromPool(DB_NAME);
+  if (existingConnection) {
+    return existingConnection;
   }
 
   return new Promise<IDBDatabase>((resolve, reject) => {
@@ -74,6 +110,7 @@ async function initDB() {
         const target = event.target as IDBRequest;
         console.error('Database error:', target.error);
       };
+      addConnectionToPool(DB_NAME, db);
       resolve(db);
     };
 
@@ -109,7 +146,6 @@ async function getFromDB<T>(key: string): Promise<T | undefined> {
 
     if (!db.objectStoreNames.contains(STORE_NAME)) {
       console.warn('Store not found, reinitializing database...');
-      db.close();
       await new Promise((resolve, reject) => {
         const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
         deleteRequest.onsuccess = () => resolve(undefined);
@@ -148,7 +184,6 @@ async function setInDB<T>(key: string, value: T): Promise<void> {
 
     if (!db.objectStoreNames.contains(STORE_NAME)) {
       console.warn('Store not found, reinitializing database...');
-      db.close();
       await new Promise((resolve, reject) => {
         const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
         deleteRequest.onsuccess = () => resolve(undefined);
@@ -164,18 +199,15 @@ async function setInDB<T>(key: string, value: T): Promise<void> {
 
       transaction.onerror = () => {
         console.error('Transaction error:', transaction.error);
-        db?.close();
         reject(transaction.error);
       };
 
       request.onerror = () => {
         console.error('Write error:', request.error);
-        db?.close();
         reject(request.error);
       };
 
       transaction.oncomplete = () => {
-        db?.close();
         resolve();
       };
 
@@ -185,7 +217,6 @@ async function setInDB<T>(key: string, value: T): Promise<void> {
     });
   } catch (error) {
     console.error('Failed to write to IndexedDB:', error);
-    if (db) db.close();
     // Fallback to localStorage if IndexedDB fails
     try {
       localStorage.setItem(key, JSON.stringify(value));
@@ -352,15 +383,14 @@ async function backupDataToSafeLocation(data: Note[]): Promise<void> {
     return;
   }
 
+  const CHUNK_SIZE = 100; // Process notes in chunks of 100
   const dbRequest = indexedDB.open('BackupDatabase', 1);
 
   dbRequest.onupgradeneeded = (event) => {
     const db = (event.target as IDBOpenDBRequest).result;
-    // Delete old object store if it exists
     if (db.objectStoreNames.contains('backups')) {
       db.deleteObjectStore('backups');
     }
-    // Create new object store with index
     const store = db.createObjectStore('backups', { keyPath: 'date' });
     store.createIndex('dateIndex', 'date', { unique: false });
   };
@@ -371,44 +401,67 @@ async function backupDataToSafeLocation(data: Note[]): Promise<void> {
       reject(dbRequest.error);
     };
 
-    dbRequest.onsuccess = () => {
+    dbRequest.onsuccess = async () => {
       const db = dbRequest.result;
-      const transaction = db.transaction('backups', 'readwrite');
-      const store = transaction.objectStore('backups');
+      try {
+        // Process cleanup in a separate transaction
+        const cleanupTx = db.transaction('backups', 'readwrite');
+        const store = cleanupTx.objectStore('backups');
 
-      // Cleanup old backups first
-      store.getAllKeys().onsuccess = (event) => {
-        const keys = (event.target as IDBRequest).result as string[];
-        if (keys.length >= 5) {
-          // Sort keys by date and keep only the latest 4
-          keys
-            .sort()
-            .slice(0, -4)
-            .forEach((key) => {
-              store.delete(key);
-            });
+        await new Promise<void>((resolve, reject) => {
+          const request = store.getAllKeys();
+          request.onsuccess = () => {
+            const keys = request.result as string[];
+            if (keys.length >= 5) {
+              // Sort keys by date and keep only the latest 4
+              keys.sort()
+                .slice(0, -4)
+                .forEach(key => {
+                  store.delete(key);
+                });
+            }
+            resolve();
+          };
+          request.onerror = () => reject(request.error);
+        });
+
+        // Process backup in chunks
+        const chunks = [];
+        for (let i = 0; i < data.length; i += CHUNK_SIZE) {
+          chunks.push(data.slice(i, i + CHUNK_SIZE));
         }
-      };
 
-      const backupEntry = {
-        date: new Date().toISOString(),
-        data: data.map((note) => ({
-          ...note,
-          content: note.content.slice(0, 10000), // Limit content size
-        })),
-      };
+        const backupEntry: { date: string; data: Note[] } = {
+          date: new Date().toISOString(),
+          data: [],
+        };
 
-      const request = store.put(backupEntry);
+        // Process each chunk
+        for (const chunk of chunks) {
+          const processedChunk = chunk.map(note => ({
+            ...note,
+            content: note.content.slice(0, 10000), // Limit content size
+          })) as Note[];
+          backupEntry.data.push(...processedChunk);
+        }
 
-      request.onerror = () => {
-        console.error('Error backing up data in IndexedDB', request.error);
-        reject(request.error);
-      };
+        // Save the processed data
+        const tx = db.transaction('backups', 'readwrite');
+        const backupStore = tx.objectStore('backups');
+        
+        await new Promise<void>((resolve, reject) => {
+          const request = backupStore.put(backupEntry);
+          request.onerror = () => reject(request.error);
+          tx.oncomplete = () => resolve();
+        });
 
-      transaction.oncomplete = () => {
+      } catch (error) {
+        console.error('Error during backup:', error);
+        reject(error);
+      } finally {
         db.close();
-        resolve();
-      };
+      }
+      resolve();
     };
   });
 }
@@ -420,19 +473,24 @@ function usePeriodicBackup(
   useEffect(() => {
     let isBackupInProgress = false;
     let isMounted = true;
-    const lastBackupDateStr = localStorage.getItem('lastBackupDate');
-    const lastBackupDate = lastBackupDateStr
-      ? new Date(lastBackupDateStr)
-      : new Date(0);
-    const now = new Date();
+    let timeoutId: number | undefined;
 
     const performBackup = async () => {
       if (isBackupInProgress || !isMounted) return;
       isBackupInProgress = true;
+
       try {
-        await backupDataToSafeLocation(data);
-        if (isMounted) {
-          localStorage.setItem('lastBackupDate', new Date().toISOString());
+        const lastBackupDateStr = localStorage.getItem('lastBackupDate');
+        const lastBackupDate = lastBackupDateStr
+          ? new Date(lastBackupDateStr)
+          : new Date(0);
+        const now = new Date();
+
+        if (now.getTime() - lastBackupDate.getTime() > interval) {
+          await backupDataToSafeLocation(data);
+          if (isMounted) {
+            localStorage.setItem('lastBackupDate', new Date().toISOString());
+          }
         }
       } catch (error) {
         console.error('Backup failed:', error);
@@ -441,17 +499,20 @@ function usePeriodicBackup(
       }
     };
 
-    if (now.getTime() - lastBackupDate.getTime() > interval) {
-      performBackup();
-    }
+    const scheduleNextBackup = () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(async () => {
+        await performBackup();
+        if (isMounted) scheduleNextBackup();
+      }, interval);
+    };
 
-    const intervalId = setInterval(performBackup, interval);
+    performBackup();
+    scheduleNextBackup();
 
     return () => {
       isMounted = false;
-      clearInterval(intervalId);
-      // If a backup is in progress, we'll let it finish naturally
-      // but won't update localStorage due to isMounted check
+      if (timeoutId) window.clearTimeout(timeoutId);
     };
   }, [data, interval]);
 }
@@ -1482,25 +1543,6 @@ function App() {
       if (event.code === 'AltLeft') {
         setIsAltKeyDown(false);
       }
-      // if (
-      //   hasVimNavigated &&
-      //   isCmdKMenuOpen &&
-      //   (event.key === 'Meta' || event.key === 'Control')
-      // ) {
-      //   let shouldCloseCmdK: boolean = true;
-      //   if (cmdKSuggestions.length > 0) {
-      //     const suggestion = cmdKSuggestions[selectedCmdKSuggestionIndex];
-      //     shouldCloseCmdK = runCmdKSuggestion(suggestion);
-      //   }
-
-      //   if (shouldCloseCmdK) {
-      //     setIsCmdKMenuOpen(false);
-      //   }
-
-      //   setHasVimNavigated(false);
-
-      //   focus();
-      // }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -1647,14 +1689,8 @@ function App() {
         editor.container.remove();
       }
 
-      // Force close any open IndexedDB connections
-      if (window.indexedDB) {
-        const request = window.indexedDB.open(DB_NAME);
-        request.onsuccess = (event) => {
-          const db = (event.target as IDBOpenDBRequest).result;
-          db.close();
-        };
-      }
+      // Close all IndexedDB connections
+      closeAllConnections();
     };
   }, []);
 
@@ -1887,23 +1923,6 @@ function App() {
               >
                 import
               </button>
-              {/* <button
-                tabIndex={-1}
-                onClick={() => setShouldShowScrollbar(!shouldShowScrollbar)}
-              >
-                <span
-                  title={
-                    shouldShowScrollbar ? 'hide scrollbar' : 'show scrollbar'
-                  }
-                  style={{
-                    textDecoration: shouldShowScrollbar
-                      ? 'line-through'
-                      : 'none',
-                  }}
-                >
-                  scrollbar
-                </span>
-              </button> */}
               {textValue && (
                 <button tabIndex={-1} onClick={() => openNewNote('')}>
                   new
