@@ -466,6 +466,10 @@ async function backupDataToSafeLocation(data: Note[]): Promise<void> {
   });
 }
 
+// Currently unused - disabled to prevent memory issues
+// Can be re-enabled if memory performance is improved
+// @ts-expect-error - Kept for future use
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function usePeriodicBackup(
   data: Note[],
   interval: number = 24 * 60 * 60 * 1000,
@@ -595,7 +599,8 @@ function App() {
     freshDatabase,
   );
 
-  usePeriodicBackup(database);
+  // Auto backup disabled to prevent memory issues
+  // usePeriodicBackup(database);
 
   const [currentWorkspace, setCurrentWorkspace] = usePersistentState<
     string | null
@@ -787,7 +792,8 @@ function App() {
   >('typehere-deletedNotes', []);
   const [shouldShowHiddenNotes, setShouldShowHiddenNotes] = useState(false);
 
-  usePeriodicBackup(deletedNotesBackup);
+  // Auto backup disabled to prevent memory issues
+  // usePeriodicBackup(deletedNotesBackup);
 
   const toggleTheme = () => {
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
