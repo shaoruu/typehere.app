@@ -917,7 +917,7 @@ function App() {
     note.isHidden = isHidden;
     setDatabase(sortNotes([...database.filter((n) => n.id !== note.id), note]));
   };
-  const getAllSuggestions = (
+  const getAllSuggestions = useCallback((
     shouldSearchAllNotes = false,
   ): CmdKSuggestion[] => {
     const processedCmdKSearchQuery =
@@ -1275,7 +1275,7 @@ function App() {
       })),
       ...actions,
     ];
-  };
+  },[database,cmdKSearchQuery,workspaceNotes]);
 
   const cmdKSuggestions = useMemo<CmdKSuggestion[]>(() => {
     const shouldSearchAllNotes = searchAllNotesKeys.some((key) =>
