@@ -299,7 +299,7 @@ function usePersistentState<
     return () => {
       isMounted = false;
     };
-  }, [storageKey, defaultValue]);
+  }, [storageKey]);
 
   // Debounced save function
   const debouncedSave = useMemo(
