@@ -1,24 +1,24 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { createPortal } from 'react-dom';
-import LZString from 'lz-string';
-import Fuse from 'fuse.js';
-import AceEditor from 'react-ace';
-import { FaMapPin } from 'react-icons/fa';
-import { MdVisibilityOff } from 'react-icons/md';
-import isElectron from 'is-electron';
-import './App.css';
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
+import LZString from "lz-string";
+import Fuse from "fuse.js";
+import AceEditor from "react-ace";
+import { FaMapPin } from "react-icons/fa";
+import { MdVisibilityOff } from "react-icons/md";
+import isElectron from "is-electron";
+import "./App.css";
 
 const textsToReplace: [string | RegExp, string][] = [
-  ['(c)', '©'],
-  ['(r)', '®'],
-  ['+-', '±'],
+  ["(c)", "©"],
+  ["(r)", "®"],
+  ["+-", "±"],
 ];
 
 const digitCount = 5;
 
-const DB_NAME = 'typehere-db';
-const STORE_NAME = 'app-state';
+const DB_NAME = "typehere-db";
+const STORE_NAME = "app-state";
 
 interface DBSchema {
   version: number;
@@ -35,11 +35,11 @@ const migrations: Migration[] = [
     version: 1,
     migrate: (db, transaction) => {
       if (!db.objectStoreNames.contains(STORE_NAME)) {
-        console.log('Creating object store:', STORE_NAME);
+        console.log("Creating object store:", STORE_NAME);
         db.createObjectStore(STORE_NAME);
       }
       const store = transaction.objectStore(STORE_NAME);
-      store.put({ version: 1, stores: [STORE_NAME] }, 'db_schema');
+      store.put({ version: 1, stores: [STORE_NAME] }, "db_schema");
     },
   },
 ];
@@ -67,20 +67,20 @@ function addConnectionToPool(dbName: string, connection: IDBDatabase) {
 }
 
 function closeAllConnections() {
-  Object.values(DB_CONNECTION_POOL).forEach(db => {
+  Object.values(DB_CONNECTION_POOL).forEach((db) => {
     try {
       db.close();
     } catch (e) {
-      console.error('Error closing DB connection:', e);
+      console.error("Error closing DB connection:", e);
     }
   });
-  Object.keys(DB_CONNECTION_POOL).forEach(key => delete DB_CONNECTION_POOL[key]);
+  Object.keys(DB_CONNECTION_POOL).forEach((key) => delete DB_CONNECTION_POOL[key]);
 }
 
 async function initDB() {
   if (!window.indexedDB) {
     console.error("Your browser doesn't support IndexedDB");
-    return Promise.reject(new Error('IndexedDB not supported'));
+    return Promise.reject(new Error("IndexedDB not supported"));
   }
 
   // Check pool first
@@ -93,22 +93,20 @@ async function initDB() {
     const request = indexedDB.open(DB_NAME, DB_VERSION_LATEST);
 
     request.onerror = () => {
-      console.error('Database error:', request.error);
+      console.error("Database error:", request.error);
       reject(request.error);
     };
 
     request.onblocked = () => {
-      console.warn(
-        'Database blocked. Please close other tabs with this app open',
-      );
-      reject(new Error('Database blocked'));
+      console.warn("Database blocked. Please close other tabs with this app open");
+      reject(new Error("Database blocked"));
     };
 
     request.onsuccess = () => {
       const db = request.result;
       db.onerror = (event: Event) => {
         const target = event.target as IDBRequest;
-        console.error('Database error:', target.error);
+        console.error("Database error:", target.error);
       };
       addConnectionToPool(DB_NAME, db);
       resolve(db);
@@ -120,13 +118,11 @@ async function initDB() {
       const oldVersion = event.oldVersion;
 
       if (!transaction) {
-        console.error('No transaction available for migration');
+        console.error("No transaction available for migration");
         return;
       }
 
-      console.log(
-        `Running migrations from version ${oldVersion} to ${DB_VERSION_LATEST}`,
-      );
+      console.log(`Running migrations from version ${oldVersion} to ${DB_VERSION_LATEST}`);
 
       // Run all needed migrations in order
       migrations
@@ -145,7 +141,7 @@ async function getFromDB<T>(key: string): Promise<T | undefined> {
     const db = await initDB();
 
     if (!db.objectStoreNames.contains(STORE_NAME)) {
-      console.warn('Store not found, reinitializing database...');
+      console.warn("Store not found, reinitializing database...");
       await new Promise((resolve, reject) => {
         const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
         deleteRequest.onsuccess = () => resolve(undefined);
@@ -155,24 +151,24 @@ async function getFromDB<T>(key: string): Promise<T | undefined> {
     }
 
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const transaction = db.transaction(STORE_NAME, "readonly");
       const store = transaction.objectStore(STORE_NAME);
       const request = store.get(key);
 
       transaction.onerror = () => {
-        console.error('Transaction error:', transaction.error);
+        console.error("Transaction error:", transaction.error);
         reject(transaction.error);
       };
 
       request.onerror = () => {
-        console.error('Read error:', request.error);
+        console.error("Read error:", request.error);
         reject(request.error);
       };
 
       request.onsuccess = () => resolve(request.result);
     });
   } catch (error) {
-    console.error('Failed to read from IndexedDB:', error);
+    console.error("Failed to read from IndexedDB:", error);
     return undefined;
   }
 }
@@ -183,7 +179,7 @@ async function setInDB<T>(key: string, value: T): Promise<void> {
     db = await initDB();
 
     if (!db.objectStoreNames.contains(STORE_NAME)) {
-      console.warn('Store not found, reinitializing database...');
+      console.warn("Store not found, reinitializing database...");
       await new Promise((resolve, reject) => {
         const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
         deleteRequest.onsuccess = () => resolve(undefined);
@@ -193,17 +189,17 @@ async function setInDB<T>(key: string, value: T): Promise<void> {
     }
 
     return new Promise((resolve, reject) => {
-      const transaction = db!.transaction(STORE_NAME, 'readwrite');
+      const transaction = db!.transaction(STORE_NAME, "readwrite");
       const store = transaction.objectStore(STORE_NAME);
       const request = store.put(value, key);
 
       transaction.onerror = () => {
-        console.error('Transaction error:', transaction.error);
+        console.error("Transaction error:", transaction.error);
         reject(transaction.error);
       };
 
       request.onerror = () => {
-        console.error('Write error:', request.error);
+        console.error("Write error:", request.error);
         reject(request.error);
       };
 
@@ -216,19 +212,19 @@ async function setInDB<T>(key: string, value: T): Promise<void> {
       };
     });
   } catch (error) {
-    console.error('Failed to write to IndexedDB:', error);
+    console.error("Failed to write to IndexedDB:", error);
     // Fallback to localStorage if IndexedDB fails
     try {
       localStorage.setItem(key, JSON.stringify(value));
     } catch (e) {
-      console.error('Failed to write to localStorage:', e);
+      console.error("Failed to write to localStorage:", e);
     }
   }
 }
 
 function debounce<T extends (...args: Parameters<T>) => ReturnType<T>>(
   func: T,
-  wait: number,
+  wait: number
 ): {
   (...args: Parameters<T>): void;
   cancel: () => void;
@@ -247,9 +243,10 @@ function debounce<T extends (...args: Parameters<T>) => ReturnType<T>>(
   return debouncedFn;
 }
 
-function usePersistentState<
-  T extends string | number | boolean | object | null,
->(storageKey: string, defaultValue: T) {
+function usePersistentState<T extends string | number | boolean | object | null>(
+  storageKey: string,
+  defaultValue: T
+) {
   const [data, setData] = useState<T>(defaultValue);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -273,7 +270,7 @@ function usePersistentState<
               await setInDB(storageKey, value);
             }
           } catch (e) {
-            console.error('Failed to process localStorage data:', e);
+            console.error("Failed to process localStorage data:", e);
             value = defaultValue;
             await setInDB(storageKey, value);
           }
@@ -283,7 +280,7 @@ function usePersistentState<
           setData(value);
         }
       } catch (e) {
-        console.error('Failed to load data:', e);
+        console.error("Failed to load data:", e);
         if (isMounted) {
           setData(defaultValue);
         }
@@ -308,10 +305,10 @@ function usePersistentState<
         try {
           await setInDB(storageKey, value);
         } catch (e) {
-          console.error('Failed to save data:', e);
+          console.error("Failed to save data:", e);
         }
       }, 200),
-    [storageKey],
+    [storageKey]
   );
 
   // Cleanup debounce on unmount
@@ -327,7 +324,7 @@ function usePersistentState<
       setData(newData);
       debouncedSave(newData);
     },
-    [debouncedSave],
+    [debouncedSave]
   );
 
   // Return loading state if data hasn't been loaded yet
@@ -338,7 +335,7 @@ function usePersistentState<
   return [data ?? defaultValue, setPersistedData] as const;
 }
 
-const searchAllNotesKeys = ['@', '>'];
+const searchAllNotesKeys = ["@", ">"];
 
 const getRandomId = () => Math.random().toString(36).substring(2);
 
@@ -353,11 +350,11 @@ type Note = {
 
 type CmdKSuggestion =
   | {
-      type: 'note';
+      type: "note";
       note: Note;
     }
   | {
-      type: 'action';
+      type: "action";
       title: string;
       content: string;
       color?: string;
@@ -365,12 +362,12 @@ type CmdKSuggestion =
       onAction: () => boolean;
     };
 
-const cmdKSuggestionActionType = 'action' as const;
+const cmdKSuggestionActionType = "action" as const;
 
 const freshDatabase = [
   {
     id: getRandomId(),
-    content: '',
+    content: "",
     updatedAt: new Date().toISOString(),
     isPinned: false,
     isHidden: false,
@@ -378,26 +375,26 @@ const freshDatabase = [
 ];
 
 async function backupDataToSafeLocation(data: Note[]): Promise<void> {
-  if (!('indexedDB' in window)) {
+  if (!("indexedDB" in window)) {
     console.error("This browser doesn't support IndexedDB");
     return;
   }
 
   const CHUNK_SIZE = 100; // Process notes in chunks of 100
-  const dbRequest = indexedDB.open('BackupDatabase', 1);
+  const dbRequest = indexedDB.open("BackupDatabase", 1);
 
   dbRequest.onupgradeneeded = (event) => {
     const db = (event.target as IDBOpenDBRequest).result;
-    if (db.objectStoreNames.contains('backups')) {
-      db.deleteObjectStore('backups');
+    if (db.objectStoreNames.contains("backups")) {
+      db.deleteObjectStore("backups");
     }
-    const store = db.createObjectStore('backups', { keyPath: 'date' });
-    store.createIndex('dateIndex', 'date', { unique: false });
+    const store = db.createObjectStore("backups", { keyPath: "date" });
+    store.createIndex("dateIndex", "date", { unique: false });
   };
 
   return new Promise((resolve, reject) => {
     dbRequest.onerror = () => {
-      console.error('Error opening IndexedDB for backup', dbRequest.error);
+      console.error("Error opening IndexedDB for backup", dbRequest.error);
       reject(dbRequest.error);
     };
 
@@ -405,8 +402,8 @@ async function backupDataToSafeLocation(data: Note[]): Promise<void> {
       const db = dbRequest.result;
       try {
         // Process cleanup in a separate transaction
-        const cleanupTx = db.transaction('backups', 'readwrite');
-        const store = cleanupTx.objectStore('backups');
+        const cleanupTx = db.transaction("backups", "readwrite");
+        const store = cleanupTx.objectStore("backups");
 
         await new Promise<void>((resolve, reject) => {
           const request = store.getAllKeys();
@@ -414,9 +411,10 @@ async function backupDataToSafeLocation(data: Note[]): Promise<void> {
             const keys = request.result as string[];
             if (keys.length >= 5) {
               // Sort keys by date and keep only the latest 4
-              keys.sort()
+              keys
+                .sort()
                 .slice(0, -4)
-                .forEach(key => {
+                .forEach((key) => {
                   store.delete(key);
                 });
             }
@@ -438,7 +436,7 @@ async function backupDataToSafeLocation(data: Note[]): Promise<void> {
 
         // Process each chunk
         for (const chunk of chunks) {
-          const processedChunk = chunk.map(note => ({
+          const processedChunk = chunk.map((note) => ({
             ...note,
             content: note.content.slice(0, 10000), // Limit content size
           })) as Note[];
@@ -446,17 +444,16 @@ async function backupDataToSafeLocation(data: Note[]): Promise<void> {
         }
 
         // Save the processed data
-        const tx = db.transaction('backups', 'readwrite');
-        const backupStore = tx.objectStore('backups');
-        
+        const tx = db.transaction("backups", "readwrite");
+        const backupStore = tx.objectStore("backups");
+
         await new Promise<void>((resolve, reject) => {
           const request = backupStore.put(backupEntry);
           request.onerror = () => reject(request.error);
           tx.oncomplete = () => resolve();
         });
-
       } catch (error) {
-        console.error('Error during backup:', error);
+        console.error("Error during backup:", error);
         reject(error);
       } finally {
         db.close();
@@ -470,10 +467,7 @@ async function backupDataToSafeLocation(data: Note[]): Promise<void> {
 // Can be re-enabled if memory performance is improved
 // @ts-expect-error - Kept for future use
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function usePeriodicBackup(
-  data: Note[],
-  interval: number = 24 * 60 * 60 * 1000,
-): void {
+function usePeriodicBackup(data: Note[], interval: number = 24 * 60 * 60 * 1000): void {
   useEffect(() => {
     let isBackupInProgress = false;
     let isMounted = true;
@@ -484,20 +478,18 @@ function usePeriodicBackup(
       isBackupInProgress = true;
 
       try {
-        const lastBackupDateStr = localStorage.getItem('lastBackupDate');
-        const lastBackupDate = lastBackupDateStr
-          ? new Date(lastBackupDateStr)
-          : new Date(0);
+        const lastBackupDateStr = localStorage.getItem("lastBackupDate");
+        const lastBackupDate = lastBackupDateStr ? new Date(lastBackupDateStr) : new Date(0);
         const now = new Date();
 
         if (now.getTime() - lastBackupDate.getTime() > interval) {
           await backupDataToSafeLocation(data);
           if (isMounted) {
-            localStorage.setItem('lastBackupDate', new Date().toISOString());
+            localStorage.setItem("lastBackupDate", new Date().toISOString());
           }
         }
       } catch (error) {
-        console.error('Backup failed:', error);
+        console.error("Backup failed:", error);
       } finally {
         isBackupInProgress = false;
       }
@@ -521,16 +513,14 @@ function usePeriodicBackup(
   }, [data, interval]);
 }
 
-const themeId = 'typehere-theme';
+const themeId = "typehere-theme";
 if (localStorage.getItem(themeId) === '"dark"') {
-  document.documentElement.setAttribute('data-theme', 'dark');
+  document.documentElement.setAttribute("data-theme", "dark");
 }
 
 const sortNotes = (notes: Note[]) => {
   if (!notes || notes.length === 0) return [];
-  return notes.sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-  );
+  return notes.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 };
 
 // Helper function to check current schema version - now uses direct IndexedDB access
@@ -539,19 +529,19 @@ async function getCurrentSchema(): Promise<DBSchema | undefined> {
     const request = indexedDB.open(DB_NAME);
 
     request.onerror = () => {
-      console.error('Failed to open DB for schema check:', request.error);
+      console.error("Failed to open DB for schema check:", request.error);
       resolve(undefined);
     };
 
     request.onsuccess = () => {
       const db = request.result;
       try {
-        const transaction = db.transaction(STORE_NAME, 'readonly');
+        const transaction = db.transaction(STORE_NAME, "readonly");
         const store = transaction.objectStore(STORE_NAME);
-        const schemaRequest = store.get('db_schema');
+        const schemaRequest = store.get("db_schema");
 
         schemaRequest.onerror = () => {
-          console.error('Failed to get schema:', schemaRequest.error);
+          console.error("Failed to get schema:", schemaRequest.error);
           db.close();
           resolve(undefined);
         };
@@ -561,7 +551,7 @@ async function getCurrentSchema(): Promise<DBSchema | undefined> {
           resolve(schemaRequest.result);
         };
       } catch (error) {
-        console.error('Error accessing schema:', error);
+        console.error("Error accessing schema:", error);
         db.close();
         resolve(undefined);
       }
@@ -572,7 +562,7 @@ async function getCurrentSchema(): Promise<DBSchema | undefined> {
 // Add a function to check and log schema version - useful for debugging
 async function checkSchemaVersion() {
   const schema = await getCurrentSchema();
-  console.log('Current schema version:', schema?.version || 'not set');
+  console.log("Current schema version:", schema?.version || "not set");
   return schema;
 }
 
@@ -581,11 +571,11 @@ checkSchemaVersion().catch(console.error);
 
 const getCurrentTime = () => {
   const now = new Date();
-  const month = now.toLocaleString('default', { month: 'short' }).toLowerCase();
+  const month = now.toLocaleString("default", { month: "short" }).toLowerCase();
   const day = now.getDate();
   const hour = now.getHours();
-  const minute = now.getMinutes().toString().padStart(2, '0');
-  const period = hour >= 12 ? 'p' : 'a';
+  const minute = now.getMinutes().toString().padStart(2, "0");
+  const period = hour >= 12 ? "p" : "a";
   const hour12 = hour % 12 || 12;
   return `${month}${day}, ${hour12}:${minute}${period}`;
 };
@@ -594,30 +584,30 @@ function App() {
   const textareaDomRef = useRef<HTMLTextAreaElement>(null);
   const cmdKInputDomRef = useRef<HTMLInputElement>(null);
 
-  const [database, setDatabase] = usePersistentState<Note[]>(
-    'typehere-database',
-    freshDatabase,
-  );
+  const [database, setDatabase] = usePersistentState<Note[]>("typehere-database", freshDatabase);
 
   // Auto backup disabled to prevent memory issues
   // usePeriodicBackup(database);
 
-  const [currentWorkspace, setCurrentWorkspace] = usePersistentState<
-    string | null
-  >('typehere-currentWorkspace', null);
-  const [currentNoteId, setCurrentNoteId] = usePersistentState<string>(
-    'typehere-currentNoteId',
-    freshDatabase[0].id,
+  const [currentWorkspace, setCurrentWorkspace] = usePersistentState<string | null>(
+    "typehere-currentWorkspace",
+    null
   );
-  const [shouldShowScrollbar, setShouldShowScrollbar] =
-    usePersistentState<boolean>('typehere-shouldShowScrollbar', false);
+  const [currentNoteId, setCurrentNoteId] = usePersistentState<string>(
+    "typehere-currentNoteId",
+    freshDatabase[0].id
+  );
+  const [shouldShowScrollbar, setShouldShowScrollbar] = usePersistentState<boolean>(
+    "typehere-shouldShowScrollbar",
+    false
+  );
   const [moreMenuPosition, setMoreMenuPosition] = useState<{
     x: number;
     y: number;
   } | null>(null);
   const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
   const [isAltKeyDown, setIsAltKeyDown] = useState(false);
-  const [textValue, setTextValue] = useState('');
+  const [textValue, setTextValue] = useState("");
   const [lastAceCursorPosition, setLastAceCursorPosition] = useState({
     row: 0,
     column: 0,
@@ -626,11 +616,7 @@ function App() {
   const workspaceNotes = useMemo(() => {
     return currentWorkspace === null
       ? sortNotes(database ?? [])
-      : sortNotes(
-          (database ?? []).filter(
-            (n) => n.workspace === currentWorkspace || n.isPinned,
-          ),
-        );
+      : sortNotes((database ?? []).filter((n) => n.workspace === currentWorkspace || n.isPinned));
   }, [database, currentWorkspace]);
 
   const availableWorkspaces = useMemo(() => {
@@ -655,9 +641,7 @@ function App() {
   }, [availableWorkspaces]);
 
   useEffect(() => {
-    const currentNote = workspaceNotes.find(
-      (note) => note.id === currentNoteId,
-    );
+    const currentNote = workspaceNotes.find((note) => note.id === currentNoteId);
     if (currentNote) {
       setTextValue(currentNote.content);
     } else if (workspaceNotes.length > 0) {
@@ -670,10 +654,7 @@ function App() {
     if (aceEditorRef.current) {
       const editor = aceEditorRef.current.editor;
       if (editor.isFocused()) return;
-      editor.moveCursorTo(
-        lastAceCursorPosition.row,
-        lastAceCursorPosition.column,
-      );
+      editor.moveCursorTo(lastAceCursorPosition.row, lastAceCursorPosition.column);
       editor.focus();
     } else {
       textareaDomRef.current?.focus();
@@ -688,20 +669,18 @@ function App() {
     const updatedDatabase = database.filter((note) => note.id !== noteId);
     setDatabase(updatedDatabase);
     if (currentNoteId === noteId) {
-      setCurrentNoteId(updatedDatabase[0]?.id || '');
-      setTextValue(updatedDatabase[0]?.content || '');
+      setCurrentNoteId(updatedDatabase[0]?.id || "");
+      setTextValue(updatedDatabase[0]?.content || "");
     }
   };
 
-  const [historyStack, setHistoryStack] = useState<string[]>([
-    currentNoteId ?? '',
-  ]);
+  const [historyStack, setHistoryStack] = useState<string[]>([currentNoteId ?? ""]);
   const [historyIndex, setHistoryIndex] = useState<number>(0);
 
   const openNote = (
     noteId: string,
     shouldFocus: boolean = true,
-    shouldUpdateHistory: boolean = true,
+    shouldUpdateHistory: boolean = true
   ) => {
     if (!noteId || !database?.find((n) => n.id === noteId)) {
       return;
@@ -746,9 +725,9 @@ function App() {
   };
 
   const openNewNote = (
-    defaultContent: string = '',
-    defaultWorkspace: string = '',
-    shouldFocus = true,
+    defaultContent: string = "",
+    defaultWorkspace: string = "",
+    shouldFocus = true
   ) => {
     const newNote: Note = {
       id: getRandomId(),
@@ -761,7 +740,7 @@ function App() {
 
     setDatabase([...database, newNote]);
     setCurrentNoteId(newNote.id);
-    setTextValue('');
+    setTextValue("");
     openNote(newNote.id, shouldFocus);
 
     return newNote;
@@ -769,47 +748,38 @@ function App() {
 
   const fileInputDomRef = useRef<HTMLInputElement>(null);
 
-  const [currentTheme, setCurrentTheme] = usePersistentState<'light' | 'dark'>(
-    themeId,
-    'light',
-  );
-  const [selectedCmdKSuggestionIndex, setSelectedCmdKSuggestionIndex] =
-    useState<number>(0);
-  const [cmdKSearchQuery, setCmdKSearchQuery] = useState('');
+  const [currentTheme, setCurrentTheme] = usePersistentState<"light" | "dark">(themeId, "light");
+  const [selectedCmdKSuggestionIndex, setSelectedCmdKSuggestionIndex] = useState<number>(0);
+  const [cmdKSearchQuery, setCmdKSearchQuery] = useState("");
   const [isCmdKMenuOpen, setIsCmdKMenuOpen] = useState(false);
   const [hasVimNavigated, setHasVimNavigated] = useState(false);
-  const [isUsingVim, setIsUsingVim] = usePersistentState<boolean>(
-    'typehere-vim',
-    false,
-  );
-  const [isNarrowScreen, setIsNarrowScreen] = usePersistentState<boolean>(
-    'typehere-narrow',
-    false,
-  );
+  const [isUsingVim, setIsUsingVim] = usePersistentState<boolean>("typehere-vim", false);
+  const [isNarrowScreen, setIsNarrowScreen] = usePersistentState<boolean>("typehere-narrow", false);
   const [freshlyDeletedNotes, setFreshlyDeletedNotes] = useState<Note[]>([]);
-  const [deletedNotesBackup, setDeletedNotesBackup] = usePersistentState<
-    Note[]
-  >('typehere-deletedNotes', []);
+  const [deletedNotesBackup, setDeletedNotesBackup] = usePersistentState<Note[]>(
+    "typehere-deletedNotes",
+    []
+  );
   const [shouldShowHiddenNotes, setShouldShowHiddenNotes] = useState(false);
 
   // Auto backup disabled to prevent memory issues
   // usePeriodicBackup(deletedNotesBackup);
 
   const toggleTheme = () => {
-    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    const newTheme = currentTheme === "light" ? "dark" : "light";
     saveTheme(newTheme);
   };
 
-  const saveTheme = (theme: 'light' | 'dark') => {
+  const saveTheme = (theme: "light" | "dark") => {
     setCurrentTheme(theme);
-    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute("data-theme", theme);
   };
 
   useEffect(() => {
-    if (currentTheme === 'dark') {
-      document.documentElement.setAttribute('data-theme', 'dark');
+    if (currentTheme === "dark") {
+      document.documentElement.setAttribute("data-theme", "dark");
     } else {
-      document.documentElement.setAttribute('data-theme', 'light');
+      document.documentElement.setAttribute("data-theme", "light");
     }
   }, [currentTheme]);
 
@@ -823,29 +793,26 @@ function App() {
 
   const runCmdKSuggestion = (suggestion?: CmdKSuggestion): boolean => {
     if (!suggestion) return true;
-    if (suggestion.type === 'note') {
+    if (suggestion.type === "note") {
       openNote(suggestion.note.id);
       return true;
-    } else if (suggestion.type === 'action') {
+    } else if (suggestion.type === "action") {
       return suggestion.onAction();
     }
     return false;
   };
 
-  const getNextWorkspace = (direction: 'left' | 'right') => {
+  const getNextWorkspace = (direction: "left" | "right") => {
     const currentIndex = navigableWorkspaces.indexOf(currentWorkspace ?? null);
     if (currentIndex === -1) {
-      console.warn('wtf?'); // not supposed to happen
+      console.warn("wtf?"); // not supposed to happen
     } else {
-      if (direction === 'left') {
+      if (direction === "left") {
         return navigableWorkspaces[
-          (currentIndex - 1 + navigableWorkspaces.length) %
-            navigableWorkspaces.length
+          (currentIndex - 1 + navigableWorkspaces.length) % navigableWorkspaces.length
         ];
       } else {
-        return navigableWorkspaces[
-          (currentIndex + 1) % navigableWorkspaces.length
-        ];
+        return navigableWorkspaces[(currentIndex + 1) % navigableWorkspaces.length];
       }
     }
   };
@@ -853,14 +820,14 @@ function App() {
   const openWorkspace = (workspace: string | null) => {
     setSelectedCmdKSuggestionIndex(0);
     setCurrentWorkspace(workspace ?? null);
-    setCurrentNoteId(''); // hack to force a re-render
+    setCurrentNoteId(""); // hack to force a re-render
   };
 
   const getNoteTitle = (note: Note) => {
-    const firstLineBreakIndex = note.content.trim().indexOf('\n');
+    const firstLineBreakIndex = note.content.trim().indexOf("\n");
     const title = note.content.substring(
       0,
-      firstLineBreakIndex === -1 ? undefined : firstLineBreakIndex + 1,
+      firstLineBreakIndex === -1 ? undefined : firstLineBreakIndex + 1
     );
     return title;
   };
@@ -917,415 +884,387 @@ function App() {
     note.isHidden = isHidden;
     setDatabase(sortNotes([...database.filter((n) => n.id !== note.id), note]));
   };
-  const getAllSuggestions = useCallback((
-    shouldSearchAllNotes = false,
-  ): CmdKSuggestion[] => {
-    const processedCmdKSearchQuery =
-      shouldSearchAllNotes &&
-      searchAllNotesKeys.some((key) => cmdKSearchQuery.startsWith(key))
-        ? cmdKSearchQuery.substring(1)
-        : cmdKSearchQuery;
-    const relevantNotes = shouldSearchAllNotes ? database : workspaceNotes;
-    const notesToSearch = relevantNotes
-      .filter(
-        (note) =>
-          shouldShowHiddenNotes || !note.isHidden || note.id === currentNoteId,
-      )
-      .map((note) => {
-        const firstLineBreakIndex = note.content.trim().indexOf('\n');
-        return {
-          ...note,
-          firstLineWithWorkspace:
-            firstLineBreakIndex !== -1
-              ? note.content.slice(0, firstLineBreakIndex) +
-                (note.workspace ? ` (${note.workspace})` : '')
-              : note.content + (note.workspace ? ` ${note.workspace}` : ''),
-        };
-      });
-    const hiddenNotesMatchLength = 5;
-    // we're matching the entire database for easier access.
-    const matchingHiddenNotes = database
-      .filter((note) => {
-        if (shouldShowHiddenNotes) {
-          return false;
-        }
-        const noteTitleLower = getNoteTitle(note).toLowerCase();
-        const queryLower = processedCmdKSearchQuery.toLowerCase();
-        return (
-          note.isHidden &&
-          note.id !== currentNoteId &&
-          processedCmdKSearchQuery.length &&
-          (processedCmdKSearchQuery.length >= hiddenNotesMatchLength
-            ? noteTitleLower.startsWith(queryLower)
-            : // if less than the limit, must be exact match
-              noteTitleLower === queryLower)
-        );
-      })
-      .sort(
-        (a, b) =>
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-      );
+  const getAllSuggestions = useCallback(
+    (shouldSearchAllNotes = false): CmdKSuggestion[] => {
+      const processedCmdKSearchQuery =
+        shouldSearchAllNotes && searchAllNotesKeys.some((key) => cmdKSearchQuery.startsWith(key))
+          ? cmdKSearchQuery.substring(1)
+          : cmdKSearchQuery;
+      const relevantNotes = shouldSearchAllNotes ? database : workspaceNotes;
+      const notesToSearch = relevantNotes
+        .filter((note) => shouldShowHiddenNotes || !note.isHidden || note.id === currentNoteId)
+        .map((note) => {
+          const firstLineBreakIndex = note.content.trim().indexOf("\n");
+          return {
+            ...note,
+            firstLineWithWorkspace:
+              firstLineBreakIndex !== -1
+                ? note.content.slice(0, firstLineBreakIndex) +
+                  (note.workspace ? ` (${note.workspace})` : "")
+                : note.content + (note.workspace ? ` ${note.workspace}` : ""),
+          };
+        });
+      const hiddenNotesMatchLength = 5;
+      // we're matching the entire database for easier access.
+      const matchingHiddenNotes = database
+        .filter((note) => {
+          if (shouldShowHiddenNotes) {
+            return false;
+          }
+          const noteTitleLower = getNoteTitle(note).toLowerCase();
+          const queryLower = processedCmdKSearchQuery.toLowerCase();
+          return (
+            note.isHidden &&
+            note.id !== currentNoteId &&
+            processedCmdKSearchQuery.length &&
+            (processedCmdKSearchQuery.length >= hiddenNotesMatchLength
+              ? noteTitleLower.startsWith(queryLower)
+              : // if less than the limit, must be exact match
+                noteTitleLower === queryLower)
+          );
+        })
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
-    const notesFuse = new Fuse(notesToSearch, {
-      keys: [
-        { name: 'content', weight: 1 },
-        { name: 'firstLineWithWorkspace', weight: 0.6 },
-      ],
-      includeScore: true,
-      threshold: 0.2,
-      useExtendedSearch: true,
-    });
-    const workspaceFuse = new Fuse(
-      [
-        ...availableWorkspaces.map((workspace) => ({
-          label: workspace,
-          value: workspace,
-        })),
-        {
-          label: 'all notes',
-          value: null,
-        },
-      ],
-      {
-        keys: ['label'],
+      const notesFuse = new Fuse(notesToSearch, {
+        keys: [
+          { name: "content", weight: 1 },
+          { name: "firstLineWithWorkspace", weight: 0.6 },
+        ],
         includeScore: true,
-        threshold: 0.05, // lower for workspace match
-      },
-    );
-    const notes = processedCmdKSearchQuery
-      ? notesFuse
-          .search(processedCmdKSearchQuery.trim())
-          .map((result) => result.item)
-      : notesToSearch;
-
-    if (notes.length <= 1 && !shouldSearchAllNotes) {
-      return getAllSuggestions(true);
-    }
-
-    const workspaces = processedCmdKSearchQuery
-      ? workspaceFuse
-          .search(processedCmdKSearchQuery)
-          .map((result) => result.item)
-      : [];
-    const currentNote = database.find((note) => note.id === currentNoteId);
-
-    const unlinkTitle = 'unlink note';
-    const shouldTrimQuery = processedCmdKSearchQuery.length > 20;
-    const trimmedQuery = processedCmdKSearchQuery.slice(0, 20);
-    const trimmedContent = shouldTrimQuery
-      ? trimmedQuery + '...'
-      : processedCmdKSearchQuery;
-
-    const regularCommands: CmdKSuggestion[] = [
-      {
-        type: 'action',
-        title: 'toggle light dark theme mode',
-        content:
-          'enter ' + (currentTheme === 'light' ? 'dark' : 'light') + ' mode',
-        color: '#B39DDB', // A soothing lavender
-        onAction: () => {
-          toggleTheme();
-          setCmdKSearchQuery('');
-          return false;
-        },
-      },
-      {
-        type: 'action',
-        title: 'pin/unpin current note',
-        content: currentNote?.isPinned
-          ? 'unpin from all workspaces'
-          : 'pin to all workspaces',
-        color: '#FF9800', // Orange
-        onAction: () => {
-          if (!currentNote) return true;
-          pinNote(currentNote, !currentNote.isPinned);
-          setCmdKSearchQuery('');
-          return false;
-        },
-      },
-      {
-        type: 'action',
-        title: 'toggle vim mode',
-        content: 'turn ' + (isUsingVim ? 'off' : 'on') + ' vim mode',
-        color: '#81D4FA', // A calming light blue
-        onAction: () => {
-          setIsUsingVim(!isUsingVim);
-          return true;
-        },
-      },
-      {
-        type: 'action',
-        title: 'toggle narrow screen mode',
-        content:
-          'enter ' + (isNarrowScreen ? 'wide' : 'narrow') + ' screen mode',
-        color: '#AED581', // A gentle light green
-        onAction: () => {
-          setIsNarrowScreen(!isNarrowScreen);
-          return true;
-        },
-      },
-      {
-        type: 'action',
-        title: 'backup all notes',
-        content: 'to indexedDb',
-        color: '#FFEB3B', // A soothing yellow
-        onAction: () => {
-          backupDataToSafeLocation(database);
-          return true;
-        },
-      },
-      {
-        type: 'action',
-        title: 'import notes',
-        content: 'import notes from chosen JSON file',
-        color: '#FA7070', // A soothing pink
-        onAction: () => {
-          fileInputDomRef.current?.click();
-          return true;
-        },
-      },
-      {
-        type: 'action',
-        title: 'export notes',
-        content: 'export notes to chosen JSON file',
-        color: '#FFF7F7', // A soothing white
-        onAction: () => {
-          exportDatabase();
-          setCmdKSearchQuery('');
-          return false;
-        },
-      },
-      {
-        type: 'action',
-        title: shouldShowScrollbar ? 'hide scrollbar' : 'show scrollbar',
-        content: 'toggle the scrollbar visibility',
-        color: '#B2B2FF', // A soothing light blue
-        onAction: () => {
-          setShouldShowScrollbar(!shouldShowScrollbar);
-          setCmdKSearchQuery('');
-          return true;
-        },
-      },
-    ];
-
-    const regularCommandsFuse = new Fuse(regularCommands, {
-      shouldSort: true,
-      keys: ['title', 'content'],
-      includeScore: true,
-      threshold: 0.4,
-    });
-
-    const regularCommandsResults = regularCommandsFuse.search(
-      processedCmdKSearchQuery,
-    );
-
-    const prioritizedActions: CmdKSuggestion[] = [
-      ...(processedCmdKSearchQuery
-        ? [
-            ...(workspaces.length > 0
-              ? [
-                  ...workspaces.slice(0, 3).map((workspace) => ({
-                    type: cmdKSuggestionActionType,
-                    title: `go to ${workspace.label}`,
-                    content: `↓[${workspace.label}]`,
-                    color: '#2196F3',
-                    onAction() {
-                      openWorkspace(workspace.value);
-                      setCmdKSearchQuery('');
-                      return false;
-                    },
-                  })),
-                ]
-              : []),
-          ]
-        : []),
-    ];
-
-    const actions: CmdKSuggestion[] = [
-      ...(processedCmdKSearchQuery
-        ? [
-            ...(regularCommandsResults.length > 0
-              ? regularCommandsResults.map((result) => result.item)
-              : []),
-
-            {
-              type: cmdKSuggestionActionType,
-              title: 'create new note',
-              content: `"${trimmedContent}"`,
-              color: '#4CAF50',
-              onAction: () => {
-                openNewNote(processedCmdKSearchQuery);
-                setIsCmdKMenuOpen(false);
-                setSelectedCmdKSuggestionIndex(0);
-                setCmdKSearchQuery('');
-                return true;
-              },
-            },
-            ...(workspaces.length > 0
-              ? [
-                  {
-                    type: cmdKSuggestionActionType,
-                    title: `move note to ${workspaces[0].label}`,
-                    content: `→[${workspaces[0].label}]`,
-                    color: '#00BCD4',
-                    onAction() {
-                      if (!currentNote) {
-                        console.warn('weird weird weird');
-                        return true;
-                      }
-                      moveNoteToWorkspace(
-                        currentNote,
-                        workspaces[0]?.value ?? undefined,
-                      );
-                      setCmdKSearchQuery('');
-                      return false;
-                    },
-                  },
-                ]
-              : []),
-
-            ...(availableWorkspaces.find(
-              (workspace) => workspace === processedCmdKSearchQuery,
-            )
-              ? currentWorkspace
-                ? []
-                : []
-              : [
-                  {
-                    type: cmdKSuggestionActionType,
-                    title: 'create workspace',
-                    color: '#FF9800',
-                    content: `+[${trimmedContent}]`,
-                    onAction: () => {
-                      openNewNote('', processedCmdKSearchQuery, false);
-                      setSelectedCmdKSuggestionIndex(0);
-                      setCurrentWorkspace(processedCmdKSearchQuery);
-                      setCmdKSearchQuery('');
-                      return false;
-                    },
-                  },
-                ]),
-            ...(currentWorkspace
-              ? [
-                  {
-                    type: cmdKSuggestionActionType,
-                    title: 'rename workspace',
-                    content: `±[${trimmedContent}]`,
-                    color: '#9C27B0',
-                    onAction: () => {
-                      const newDatabase = [...database].map((n) => {
-                        if (n.workspace !== currentWorkspace) {
-                          return n;
-                        }
-                        return {
-                          ...n,
-                          workspace: processedCmdKSearchQuery,
-                        };
-                      });
-                      setCurrentWorkspace(processedCmdKSearchQuery);
-                      setSelectedCmdKSuggestionIndex(0);
-                      setDatabase(newDatabase);
-                      setCmdKSearchQuery('');
-                      return false;
-                    },
-                  },
-                ]
-              : []),
-          ]
-        : []),
-      ...(currentNote?.workspace &&
-      processedCmdKSearchQuery &&
-      unlinkTitle.includes(processedCmdKSearchQuery)
-        ? [
-            {
-              type: cmdKSuggestionActionType,
-              title: unlinkTitle,
-              content: `-[${currentNote.workspace}]`,
-              color: '#F44336',
-              onAction() {
-                currentNote.workspace = undefined;
-                setDatabase(sortNotes(database));
-                setCurrentWorkspace(null);
-                return false;
-              },
-            },
-          ]
-        : []),
-    ];
-
-    sortNotes(notes);
-
-    if (shouldSearchAllNotes) {
-      notes.sort((a, b) => {
-        const aInCurrentWorkspace = a.workspace === currentWorkspace ? 1 : 0;
-        const bInCurrentWorkspace = b.workspace === currentWorkspace ? 1 : 0;
-        return bInCurrentWorkspace - aInCurrentWorkspace;
+        threshold: 0.2,
+        useExtendedSearch: true,
       });
-    }
+      const workspaceFuse = new Fuse(
+        [
+          ...availableWorkspaces.map((workspace) => ({
+            label: workspace,
+            value: workspace,
+          })),
+          {
+            label: "all notes",
+            value: null,
+          },
+        ],
+        {
+          keys: ["label"],
+          includeScore: true,
+          threshold: 0.05, // lower for workspace match
+        }
+      );
+      const notes = processedCmdKSearchQuery
+        ? notesFuse.search(processedCmdKSearchQuery.trim()).map((result) => result.item)
+        : notesToSearch;
 
-    return [
-      ...matchingHiddenNotes.map((note) => ({
-        type: 'note' as const,
-        note,
-      })),
-      ...prioritizedActions,
-      ...notes.map((note) => ({
-        type: 'note' as const,
-        note,
-      })),
-      ...actions,
-    ];
-  },[database,cmdKSearchQuery,workspaceNotes]);
+      if (notes.length <= 1 && !shouldSearchAllNotes) {
+        return getAllSuggestions(true);
+      }
+
+      const workspaces = processedCmdKSearchQuery
+        ? workspaceFuse.search(processedCmdKSearchQuery).map((result) => result.item)
+        : [];
+      const currentNote = database.find((note) => note.id === currentNoteId);
+
+      const unlinkTitle = "unlink note";
+      const shouldTrimQuery = processedCmdKSearchQuery.length > 20;
+      const trimmedQuery = processedCmdKSearchQuery.slice(0, 20);
+      const trimmedContent = shouldTrimQuery ? trimmedQuery + "..." : processedCmdKSearchQuery;
+
+      const regularCommands: CmdKSuggestion[] = [
+        {
+          type: "action",
+          title: "toggle light dark theme mode",
+          content: "enter " + (currentTheme === "light" ? "dark" : "light") + " mode",
+          color: "#B39DDB", // A soothing lavender
+          onAction: () => {
+            toggleTheme();
+            setCmdKSearchQuery("");
+            return false;
+          },
+        },
+        {
+          type: "action",
+          title: "pin/unpin current note",
+          content: currentNote?.isPinned ? "unpin from all workspaces" : "pin to all workspaces",
+          color: "#FF9800", // Orange
+          onAction: () => {
+            if (!currentNote) return true;
+            pinNote(currentNote, !currentNote.isPinned);
+            setCmdKSearchQuery("");
+            return false;
+          },
+        },
+        {
+          type: "action",
+          title: "toggle vim mode",
+          content: "turn " + (isUsingVim ? "off" : "on") + " vim mode",
+          color: "#81D4FA", // A calming light blue
+          onAction: () => {
+            setIsUsingVim(!isUsingVim);
+            return true;
+          },
+        },
+        {
+          type: "action",
+          title: "toggle narrow screen mode",
+          content: "enter " + (isNarrowScreen ? "wide" : "narrow") + " screen mode",
+          color: "#AED581", // A gentle light green
+          onAction: () => {
+            setIsNarrowScreen(!isNarrowScreen);
+            return true;
+          },
+        },
+        {
+          type: "action",
+          title: "backup all notes",
+          content: "to indexedDb",
+          color: "#FFEB3B", // A soothing yellow
+          onAction: () => {
+            backupDataToSafeLocation(database);
+            return true;
+          },
+        },
+        {
+          type: "action",
+          title: "import notes",
+          content: "import notes from chosen JSON file",
+          color: "#FA7070", // A soothing pink
+          onAction: () => {
+            fileInputDomRef.current?.click();
+            return true;
+          },
+        },
+        {
+          type: "action",
+          title: "export notes",
+          content: "export notes to chosen JSON file",
+          color: "#FFF7F7", // A soothing white
+          onAction: () => {
+            exportDatabase();
+            setCmdKSearchQuery("");
+            return false;
+          },
+        },
+        {
+          type: "action",
+          title: shouldShowScrollbar ? "hide scrollbar" : "show scrollbar",
+          content: "toggle the scrollbar visibility",
+          color: "#B2B2FF", // A soothing light blue
+          onAction: () => {
+            setShouldShowScrollbar(!shouldShowScrollbar);
+            setCmdKSearchQuery("");
+            return true;
+          },
+        },
+      ];
+
+      const regularCommandsFuse = new Fuse(regularCommands, {
+        shouldSort: true,
+        keys: ["title", "content"],
+        includeScore: true,
+        threshold: 0.4,
+      });
+
+      const regularCommandsResults = regularCommandsFuse.search(processedCmdKSearchQuery);
+
+      const prioritizedActions: CmdKSuggestion[] = [
+        ...(processedCmdKSearchQuery
+          ? [
+              ...(workspaces.length > 0
+                ? [
+                    ...workspaces.slice(0, 3).map((workspace) => ({
+                      type: cmdKSuggestionActionType,
+                      title: `go to ${workspace.label}`,
+                      content: `↓[${workspace.label}]`,
+                      color: "#2196F3",
+                      onAction() {
+                        openWorkspace(workspace.value);
+                        setCmdKSearchQuery("");
+                        return false;
+                      },
+                    })),
+                  ]
+                : []),
+            ]
+          : []),
+      ];
+
+      const actions: CmdKSuggestion[] = [
+        ...(processedCmdKSearchQuery
+          ? [
+              ...(regularCommandsResults.length > 0
+                ? regularCommandsResults.map((result) => result.item)
+                : []),
+
+              {
+                type: cmdKSuggestionActionType,
+                title: "create new note",
+                content: `"${trimmedContent}"`,
+                color: "#4CAF50",
+                onAction: () => {
+                  openNewNote(processedCmdKSearchQuery);
+                  setIsCmdKMenuOpen(false);
+                  setSelectedCmdKSuggestionIndex(0);
+                  setCmdKSearchQuery("");
+                  return true;
+                },
+              },
+              ...(workspaces.length > 0
+                ? [
+                    {
+                      type: cmdKSuggestionActionType,
+                      title: `move note to ${workspaces[0].label}`,
+                      content: `→[${workspaces[0].label}]`,
+                      color: "#00BCD4",
+                      onAction() {
+                        if (!currentNote) {
+                          console.warn("weird weird weird");
+                          return true;
+                        }
+                        moveNoteToWorkspace(currentNote, workspaces[0]?.value ?? undefined);
+                        setCmdKSearchQuery("");
+                        return false;
+                      },
+                    },
+                  ]
+                : []),
+
+              ...(availableWorkspaces.find((workspace) => workspace === processedCmdKSearchQuery)
+                ? currentWorkspace
+                  ? []
+                  : []
+                : [
+                    {
+                      type: cmdKSuggestionActionType,
+                      title: "create workspace",
+                      color: "#FF9800",
+                      content: `+[${trimmedContent}]`,
+                      onAction: () => {
+                        openNewNote("", processedCmdKSearchQuery, false);
+                        setSelectedCmdKSuggestionIndex(0);
+                        setCurrentWorkspace(processedCmdKSearchQuery);
+                        setCmdKSearchQuery("");
+                        return false;
+                      },
+                    },
+                  ]),
+              ...(currentWorkspace
+                ? [
+                    {
+                      type: cmdKSuggestionActionType,
+                      title: "rename workspace",
+                      content: `±[${trimmedContent}]`,
+                      color: "#9C27B0",
+                      onAction: () => {
+                        const newDatabase = [...database].map((n) => {
+                          if (n.workspace !== currentWorkspace) {
+                            return n;
+                          }
+                          return {
+                            ...n,
+                            workspace: processedCmdKSearchQuery,
+                          };
+                        });
+                        setCurrentWorkspace(processedCmdKSearchQuery);
+                        setSelectedCmdKSuggestionIndex(0);
+                        setDatabase(newDatabase);
+                        setCmdKSearchQuery("");
+                        return false;
+                      },
+                    },
+                  ]
+                : []),
+            ]
+          : []),
+        ...(currentNote?.workspace &&
+        processedCmdKSearchQuery &&
+        unlinkTitle.includes(processedCmdKSearchQuery)
+          ? [
+              {
+                type: cmdKSuggestionActionType,
+                title: unlinkTitle,
+                content: `-[${currentNote.workspace}]`,
+                color: "#F44336",
+                onAction() {
+                  currentNote.workspace = undefined;
+                  setDatabase(sortNotes(database));
+                  setCurrentWorkspace(null);
+                  return false;
+                },
+              },
+            ]
+          : []),
+      ];
+
+      sortNotes(notes);
+
+      if (shouldSearchAllNotes) {
+        notes.sort((a, b) => {
+          const aInCurrentWorkspace = a.workspace === currentWorkspace ? 1 : 0;
+          const bInCurrentWorkspace = b.workspace === currentWorkspace ? 1 : 0;
+          return bInCurrentWorkspace - aInCurrentWorkspace;
+        });
+      }
+
+      return [
+        ...matchingHiddenNotes.map((note) => ({
+          type: "note" as const,
+          note,
+        })),
+        ...prioritizedActions,
+        ...notes.map((note) => ({
+          type: "note" as const,
+          note,
+        })),
+        ...actions,
+      ];
+    },
+    [database, cmdKSearchQuery, workspaceNotes, currentNoteId]
+  );
 
   const cmdKSuggestions = useMemo<CmdKSuggestion[]>(() => {
-    const shouldSearchAllNotes = searchAllNotesKeys.some((key) =>
-      cmdKSearchQuery.startsWith(key),
-    );
+    const shouldSearchAllNotes = searchAllNotesKeys.some((key) => cmdKSearchQuery.startsWith(key));
     return getAllSuggestions(shouldSearchAllNotes);
   }, [cmdKSearchQuery, getAllSuggestions]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Prevent escape from minimizing the window
-      if (e.code === 'Escape') {
+      if (e.code === "Escape") {
         e.preventDefault();
       }
 
       // NO PRINT
-      if (e.code === 'KeyP' && (e.metaKey || e.ctrlKey)) {
+      if (e.code === "KeyP" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
       }
 
-      if (isCmdKMenuOpen && e.code === 'Escape') {
+      if (isCmdKMenuOpen && e.code === "Escape") {
         e.preventDefault();
         setIsCmdKMenuOpen(false);
         focus();
         return;
       }
 
-      if (e.code === 'KeyE' && (e.metaKey || e.ctrlKey)) {
+      if (e.code === "KeyE" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setIsNarrowScreen(!isNarrowScreen);
         return;
       }
 
       const currentSuggestion = cmdKSuggestions[selectedCmdKSuggestionIndex];
-      const currentSelectedNote =
-        currentSuggestion.type === 'note' ? currentSuggestion.note : null;
+      const currentSelectedNote = currentSuggestion.type === "note" ? currentSuggestion.note : null;
 
-      const vimUp = (e.ctrlKey || e.metaKey) && e.code === 'KeyK';
-      const vimDown = (e.ctrlKey || e.metaKey) && e.code === 'KeyJ';
-      const vimLeft = (e.ctrlKey || e.metaKey) && e.code === 'KeyU';
-      const vimRight = (e.ctrlKey || e.metaKey) && e.code === 'KeyI';
+      const vimUp = (e.ctrlKey || e.metaKey) && e.code === "KeyK";
+      const vimDown = (e.ctrlKey || e.metaKey) && e.code === "KeyJ";
+      const vimLeft = (e.ctrlKey || e.metaKey) && e.code === "KeyU";
+      const vimRight = (e.ctrlKey || e.metaKey) && e.code === "KeyI";
 
       if (isCmdKMenuOpen && (vimUp || vimDown || vimLeft || vimRight)) {
         setHasVimNavigated(true);
       }
 
       if (isCmdKMenuOpen) {
-        const topXDigits = new Array(digitCount)
-          .fill(0)
-          .map((_, i) => `Digit${i + 1}`);
+        const topXDigits = new Array(digitCount).fill(0).map((_, i) => `Digit${i + 1}`);
         const topXDigitsSet = new Set(topXDigits);
 
         if (e.altKey) {
@@ -1345,11 +1284,7 @@ function App() {
           return;
         }
 
-        if (
-          freshlyDeletedNotes.length > 0 &&
-          e.code === 'KeyZ' &&
-          (e.ctrlKey || e.metaKey)
-        ) {
+        if (freshlyDeletedNotes.length > 0 && e.code === "KeyZ" && (e.ctrlKey || e.metaKey)) {
           const topOfStack = freshlyDeletedNotes.pop();
           if (topOfStack) {
             e.stopImmediatePropagation();
@@ -1361,7 +1296,7 @@ function App() {
 
         let nextIndex: number | null = null;
         const length = cmdKSuggestions.length;
-        if (e.code === 'ArrowUp' || vimUp) {
+        if (e.code === "ArrowUp" || vimUp) {
           e.preventDefault();
           if (selectedCmdKSuggestionIndex === null) {
             nextIndex = length - 1;
@@ -1369,7 +1304,7 @@ function App() {
             nextIndex = (selectedCmdKSuggestionIndex - 1 + length) % length;
           }
           setSelectedCmdKSuggestionIndex(nextIndex);
-        } else if (e.code === 'ArrowDown' || vimDown) {
+        } else if (e.code === "ArrowDown" || vimDown) {
           e.preventDefault();
           if (selectedCmdKSuggestionIndex === null) {
             nextIndex = 0;
@@ -1383,15 +1318,12 @@ function App() {
           const elementId = `note-list-cmdk-item-${nextIndex}`;
           const element = document.getElementById(elementId);
           if (element) {
-            element.scrollIntoView({ block: 'center' });
+            element.scrollIntoView({ block: "center" });
           }
           return;
         }
 
-        if (
-          e.code === 'Enter' ||
-          (e.code === 'KeyB' && (e.ctrlKey || e.metaKey))
-        ) {
+        if (e.code === "Enter" || (e.code === "KeyB" && (e.ctrlKey || e.metaKey))) {
           e.preventDefault();
           const suggestion = cmdKSuggestions[selectedCmdKSuggestionIndex];
           const shouldCloseCmdK = runCmdKSuggestion(suggestion);
@@ -1403,15 +1335,13 @@ function App() {
         }
 
         const direction =
-          vimLeft || (e.code === 'ArrowLeft' && !e.metaKey && !e.ctrlKey)
-            ? 'left'
-            : vimRight || (e.code === 'ArrowRight' && !e.metaKey && !e.ctrlKey)
-            ? 'right'
-            : null;
+          vimLeft || (e.code === "ArrowLeft" && !e.metaKey && !e.ctrlKey)
+            ? "left"
+            : vimRight || (e.code === "ArrowRight" && !e.metaKey && !e.ctrlKey)
+              ? "right"
+              : null;
         const isArrowKeys =
-          !e.metaKey &&
-          !e.ctrlKey &&
-          (e.code === 'ArrowLeft' || e.code === 'ArrowRight');
+          !e.metaKey && !e.ctrlKey && (e.code === "ArrowLeft" || e.code === "ArrowRight");
         if (direction && (isArrowKeys ? cmdKSearchQuery.length === 0 : true)) {
           e.preventDefault();
           const nextWorkspace = getNextWorkspace(direction);
@@ -1421,10 +1351,7 @@ function App() {
         }
 
         if (currentSelectedNote) {
-          if (
-            (e.code === 'KeyH' || e.code === 'KeyG') &&
-            (e.metaKey || e.ctrlKey)
-          ) {
+          if ((e.code === "KeyH" || e.code === "KeyG") && (e.metaKey || e.ctrlKey)) {
             e.preventDefault();
             e.stopImmediatePropagation();
             pinNote(currentSelectedNote, !currentSelectedNote.isPinned);
@@ -1433,11 +1360,7 @@ function App() {
             return;
           }
 
-          if (
-            (e.ctrlKey || e.metaKey) &&
-            e.code === 'Quote' &&
-            !currentSelectedNote.isPinned
-          ) {
+          if ((e.ctrlKey || e.metaKey) && e.code === "Quote" && !currentSelectedNote.isPinned) {
             e.preventDefault();
             e.stopImmediatePropagation();
             const shouldAllowShowAll = false;
@@ -1450,27 +1373,21 @@ function App() {
             return;
           }
 
-          if (e.code === 'ArrowLeft' && (e.ctrlKey || e.metaKey)) {
+          if (e.code === "ArrowLeft" && (e.ctrlKey || e.metaKey)) {
             e.preventDefault();
-            const nextWorkspace = getNextWorkspace('left');
+            const nextWorkspace = getNextWorkspace("left");
             if (nextWorkspace !== currentWorkspace) {
-              moveNoteToWorkspace(
-                currentSelectedNote,
-                nextWorkspace ?? undefined,
-              );
+              moveNoteToWorkspace(currentSelectedNote, nextWorkspace ?? undefined);
               setSelectedCmdKSuggestionIndex(0);
             }
             return;
           }
 
-          if (e.code === 'ArrowRight' && (e.ctrlKey || e.metaKey)) {
+          if (e.code === "ArrowRight" && (e.ctrlKey || e.metaKey)) {
             e.preventDefault();
-            const nextWorkspace = getNextWorkspace('right');
+            const nextWorkspace = getNextWorkspace("right");
             if (nextWorkspace !== currentWorkspace) {
-              moveNoteToWorkspace(
-                currentSelectedNote,
-                nextWorkspace ?? undefined,
-              );
+              moveNoteToWorkspace(currentSelectedNote, nextWorkspace ?? undefined);
               setSelectedCmdKSuggestionIndex(0);
             }
             return;
@@ -1483,17 +1400,14 @@ function App() {
         return;
       }
 
-      if (isHelpMenuOpen && (e.code === 'Escape' || e.code === 'Enter')) {
+      if (isHelpMenuOpen && (e.code === "Escape" || e.code === "Enter")) {
         e.preventDefault();
         setIsHelpMenuOpen((prev) => !prev);
         focus();
         return;
       }
 
-      if (
-        (e.code === 'KeyP' || e.code === 'KeyK') &&
-        (e.metaKey || e.ctrlKey)
-      ) {
+      if ((e.code === "KeyP" || e.code === "KeyK") && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         textareaDomRef.current?.blur();
         setSelectedCmdKSuggestionIndex(0);
@@ -1501,15 +1415,15 @@ function App() {
         setIsHelpMenuOpen(false);
 
         if (e.shiftKey) {
-          setCmdKSearchQuery('@');
+          setCmdKSearchQuery("@");
         } else {
-          setCmdKSearchQuery('');
+          setCmdKSearchQuery("");
         }
         return;
       }
 
       if (
-        e.code === 'Enter' &&
+        e.code === "Enter" &&
         (e.metaKey || e.ctrlKey) &&
         e.shiftKey &&
         textValue.trim().length !== 0 &&
@@ -1520,7 +1434,7 @@ function App() {
         return;
       }
 
-      if (e.code === 'Enter') {
+      if (e.code === "Enter") {
         focus();
       } else if (isUsingVim && !isCmdKMenuOpen) {
         if (document.activeElement === document.body) {
@@ -1528,14 +1442,14 @@ function App() {
         }
       }
 
-      if (e.metaKey && e.code === 'BracketLeft') {
+      if (e.metaKey && e.code === "BracketLeft") {
         e.preventDefault();
         if (historyIndex > 0) {
           const prevIndex = historyIndex - 1;
           setHistoryIndex(prevIndex);
           openNote(historyStack[prevIndex], true, false);
         }
-      } else if (e.metaKey && e.code === 'BracketRight') {
+      } else if (e.metaKey && e.code === "BracketRight") {
         e.preventDefault();
         if (historyIndex < historyStack.length - 1) {
           const nextIndex = historyIndex + 1;
@@ -1546,17 +1460,17 @@ function App() {
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
-      if (event.code === 'AltLeft') {
+      if (event.code === "AltLeft") {
         setIsAltKeyDown(false);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
     };
   }, [
     database,
@@ -1604,15 +1518,15 @@ function App() {
     if (aceEditorRef.current) {
       const editor = aceEditorRef.current.editor;
       editor.renderer.setScrollMargin(32, 32, 0, 0);
-      editor.commands.removeCommand('findprevious');
-      editor.commands.removeCommand('findnext');
-      editor.commands.removeCommand('removetolineend');
-      editor.getSession().setOption('indentedSoftWrap', false);
+      editor.commands.removeCommand("findprevious");
+      editor.commands.removeCommand("findnext");
+      editor.commands.removeCommand("removetolineend");
+      editor.getSession().setOption("indentedSoftWrap", false);
 
       // Memory optimizations
-      editor.setOption('enableBasicAutocompletion', false);
-      editor.setOption('enableLiveAutocompletion', false);
-      editor.setOption('enableSnippets', false);
+      editor.setOption("enableBasicAutocompletion", false);
+      editor.setOption("enableLiveAutocompletion", false);
+      editor.setOption("enableSnippets", false);
       editor.getSession().setUseWorker(false); // Disable worker thread
       editor.renderer.setShowGutter(false);
       editor.renderer.setShowPrintMargin(false);
@@ -1625,34 +1539,32 @@ function App() {
 
     const editor = aceEditorRef.current.editor;
     if (isUsingVim) {
-      editor.setKeyboardHandler('ace/keyboard/vim');
+      editor.setKeyboardHandler("ace/keyboard/vim");
     } else {
-      editor.setKeyboardHandler('ace/keyboard/keybinding');
+      editor.setKeyboardHandler("ace/keyboard/keybinding");
     }
   }, [isUsingVim]);
 
-  const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-  const cmdKey = isMac ? '⌘' : 'ctrl';
+  const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+  const cmdKey = isMac ? "⌘" : "ctrl";
 
   const exportDatabase = async () => {
-    const compressedData = LZString.compressToEncodedURIComponent(
-      JSON.stringify(database),
-    );
-    const dataStr = 'data:text/json;charset=utf-8,' + compressedData;
+    const compressedData = LZString.compressToEncodedURIComponent(JSON.stringify(database));
+    const dataStr = "data:text/json;charset=utf-8," + compressedData;
 
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute('href', dataStr);
-    downloadAnchorNode.setAttribute('download', 'notes_export.json');
+    const downloadAnchorNode = document.createElement("a");
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "notes_export.json");
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
   };
 
   useEffect(() => {
-    const aceScroller = document.querySelector('.ace_scrollbar') as HTMLElement;
+    const aceScroller = document.querySelector(".ace_scrollbar") as HTMLElement;
     if (aceScroller) {
-      aceScroller.style.visibility = shouldShowScrollbar ? 'visible' : 'hidden';
-      document.body.classList.toggle('show-scrollbar', shouldShowScrollbar);
+      aceScroller.style.visibility = shouldShowScrollbar ? "visible" : "hidden";
+      document.body.classList.toggle("show-scrollbar", shouldShowScrollbar);
     }
   }, [shouldShowScrollbar]);
 
@@ -1661,17 +1573,17 @@ function App() {
 
     const adjustTitleBarSize = () => {
       const zoomLevel = window.devicePixelRatio;
-      const titleBar = document.querySelector('.custom-title-bar');
+      const titleBar = document.querySelector(".custom-title-bar");
       if (titleBar) {
         (titleBar as HTMLElement).style.height = `${28 / zoomLevel}px`;
       }
     };
 
-    window.addEventListener('resize', adjustTitleBarSize);
+    window.addEventListener("resize", adjustTitleBarSize);
     adjustTitleBarSize(); // Initial adjustment
 
     return () => {
-      window.removeEventListener('resize', adjustTitleBarSize);
+      window.removeEventListener("resize", adjustTitleBarSize);
     };
   }, []);
 
@@ -1705,8 +1617,8 @@ function App() {
       style={{
         ...(isNarrowScreen
           ? {
-              maxWidth: 'calc(800px + 64px)',
-              margin: '0 auto',
+              maxWidth: "calc(800px + 64px)",
+              margin: "0 auto",
             }
           : {}),
       }}
@@ -1719,14 +1631,14 @@ function App() {
       )}
       <div
         style={{
-          width: '100%',
-          height: isElectron() ? 'calc(100vh - 28px)' : '100vh', // Adjust height based on whether it's Electron
-          padding: isNarrowScreen ? '0px' : '0 36px',
-          ...(shouldShowScrollbar ? { paddingRight: '0px' } : {}),
+          width: "100%",
+          height: isElectron() ? "calc(100vh - 28px)" : "100vh", // Adjust height based on whether it's Electron
+          padding: isNarrowScreen ? "0px" : "0 36px",
+          ...(shouldShowScrollbar ? { paddingRight: "0px" } : {}),
         }}
       >
         <AceEditor
-          theme={currentTheme === 'dark' ? 'clouds_midnight' : 'clouds'}
+          theme={currentTheme === "dark" ? "clouds_midnight" : "clouds"}
           ref={aceEditorRef}
           value={textValue}
           onChange={(newText: string) => {
@@ -1753,19 +1665,15 @@ function App() {
           height="100%"
           className="editor"
           onLoad={() => {
-            const aceScroller = document.querySelector(
-              '.ace_scrollbar',
-            ) as HTMLElement;
+            const aceScroller = document.querySelector(".ace_scrollbar") as HTMLElement;
             if (aceScroller) {
-              aceScroller.style.visibility = shouldShowScrollbar
-                ? 'visible'
-                : 'hidden';
+              aceScroller.style.visibility = shouldShowScrollbar ? "visible" : "hidden";
             }
           }}
           style={{
-            lineHeight: '1.5',
-            background: 'var(--note-background-color)',
-            color: 'var(--dark-color)',
+            lineHeight: "1.5",
+            background: "var(--note-background-color)",
+            color: "var(--dark-color)",
           }}
           placeholder="Type here..."
         />
@@ -1773,12 +1681,12 @@ function App() {
       <div id="controls">
         <div
           style={{
-            color: 'var(--dark-color)',
+            color: "var(--dark-color)",
             opacity: 0.5,
-            fontSize: '0.8rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
+            fontSize: "0.8rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
           }}
         >
           {currentWorkspace && <span>[{currentWorkspace}]</span>}
@@ -1789,10 +1697,10 @@ function App() {
             <>
               <div
                 style={{
-                  width: '100vw',
-                  height: '100vh',
-                  position: 'fixed',
-                  background: 'var(--overlay-background-color)',
+                  width: "100vw",
+                  height: "100vh",
+                  position: "fixed",
+                  background: "var(--overlay-background-color)",
                   top: 0,
                   left: 0,
                   zIndex: 10,
@@ -1861,7 +1769,7 @@ function App() {
                 <button onClick={() => setIsHelpMenuOpen(false)}>close</button>
               </div>
             </>,
-            document.body,
+            document.body
           )}
         <button
           onClick={(e) => {
@@ -1878,9 +1786,9 @@ function App() {
           <>
             <div
               style={{
-                width: '100vw',
-                height: '100vh',
-                position: 'fixed',
+                width: "100vw",
+                height: "100vh",
+                position: "fixed",
                 top: 0,
                 left: 0,
               }}
@@ -1890,7 +1798,7 @@ function App() {
             />
             <div
               style={{
-                position: 'fixed',
+                position: "fixed",
                 right: moreMenuPosition.x,
                 bottom: moreMenuPosition.y,
                 zIndex: 100,
@@ -1903,7 +1811,7 @@ function App() {
                   setIsUsingVim(!isUsingVim);
                 }}
               >
-                {isUsingVim ? 'no vim' : 'vim'}
+                {isUsingVim ? "no vim" : "vim"}
               </button>
               <button
                 onClick={() => {
@@ -1911,7 +1819,7 @@ function App() {
                   toggleTheme();
                 }}
               >
-                {currentTheme === 'light' ? 'dark' : 'light'}
+                {currentTheme === "light" ? "dark" : "light"}
               </button>
               <button
                 onClick={() => {
@@ -1923,29 +1831,22 @@ function App() {
               <button tabIndex={-1} onClick={exportDatabase}>
                 export
               </button>
-              <button
-                tabIndex={-1}
-                onClick={() => fileInputDomRef.current?.click()}
-              >
+              <button tabIndex={-1} onClick={() => fileInputDomRef.current?.click()}>
                 import
               </button>
               {textValue && (
-                <button tabIndex={-1} onClick={() => openNewNote('')}>
+                <button tabIndex={-1} onClick={() => openNewNote("")}>
                   new
                 </button>
               )}
               <div
                 style={{
-                  height: '1px',
-                  width: '100%',
-                  backgroundColor: 'var(--border-color)',
+                  height: "1px",
+                  width: "100%",
+                  backgroundColor: "var(--border-color)",
                 }}
               />
-              <a
-                href="https://github.com/shaoruu/typehere.app"
-                target="_blank"
-                rel="noreferrer"
-              >
+              <a href="https://github.com/shaoruu/typehere.app" target="_blank" rel="noreferrer">
                 <button tabIndex={-1}>github</button>
               </a>
               <button tabIndex={-1} onClick={() => setIsHelpMenuOpen(true)}>
@@ -1960,8 +1861,8 @@ function App() {
           <>
             <div
               style={{
-                backgroundColor: 'var(--overlay-background-color)',
-                position: 'fixed',
+                backgroundColor: "var(--overlay-background-color)",
+                position: "fixed",
                 top: 0,
                 left: 0,
                 right: 0,
@@ -1975,17 +1876,17 @@ function App() {
             <div
               style={{
                 zIndex: 100,
-                position: 'fixed',
-                top: '25%',
-                left: '50%',
-                width: '240px',
-                transform: 'translateX(-50%)',
-                backgroundColor: 'var(--note-background-color)',
-                boxShadow: '0 4px 6px var(--box-shadow-color)',
-                display: 'flex',
-                flexDirection: 'column',
+                position: "fixed",
+                top: "25%",
+                left: "50%",
+                width: "240px",
+                transform: "translateX(-50%)",
+                backgroundColor: "var(--note-background-color)",
+                boxShadow: "0 4px 6px var(--box-shadow-color)",
+                display: "flex",
+                flexDirection: "column",
                 borderRadius: 6,
-                border: '1px solid var(--border-color)',
+                border: "1px solid var(--border-color)",
               }}
             >
               <input
@@ -1998,28 +1899,28 @@ function App() {
                   setSelectedCmdKSuggestionIndex(0);
                 }}
                 style={{
-                  padding: '4px',
-                  outline: 'none',
-                  border: '1px solid var(--border-color)',
+                  padding: "4px",
+                  outline: "none",
+                  border: "1px solid var(--border-color)",
                   borderRadius: 4,
-                  margin: '6px',
+                  margin: "6px",
                   marginBottom: 0,
                 }}
               />
               <div
                 className="notes-list no-scrollbar"
                 style={{
-                  maxHeight: '300px',
-                  overflow: 'auto',
-                  display: 'flex',
-                  border: 'none',
-                  flexDirection: 'column',
+                  maxHeight: "300px",
+                  overflow: "auto",
+                  display: "flex",
+                  border: "none",
+                  flexDirection: "column",
                   gap: 4,
                   padding: 4,
                 }}
               >
                 {cmdKSuggestions.map((suggestion, index) => {
-                  if (suggestion.type === 'note') {
+                  if (suggestion.type === "note") {
                     const note = suggestion.note;
                     const title = getNoteTitle(note);
                     const timestamp = new Date(note.updatedAt).toLocaleString();
@@ -2035,29 +1936,28 @@ function App() {
                         style={{
                           backgroundColor:
                             index === selectedCmdKSuggestionIndex
-                              ? 'var(--note-selected-background-color)'
-                              : 'var(--note-background-color)',
+                              ? "var(--note-selected-background-color)"
+                              : "var(--note-background-color)",
                         }}
                       >
                         <div className="note-list-item-top">
                           <div
                             className="note-list-item-title"
                             style={{
-                              fontWeight:
-                                note.id === currentNoteId ? 'bold' : 'normal',
-                              fontStyle: title ? 'normal' : 'italic',
+                              fontWeight: note.id === currentNoteId ? "bold" : "normal",
+                              fontStyle: title ? "normal" : "italic",
                               color: title
-                                ? 'var(--dark-color)'
-                                : 'var(--untitled-note-title-color)',
+                                ? "var(--dark-color)"
+                                : "var(--untitled-note-title-color)",
                             }}
                           >
                             {isAltKeyDown && index + 1 <= digitCount && (
                               <div
                                 style={{
-                                  display: 'inline-block',
-                                  color: 'var(--secondary-dark-color)',
-                                  marginRight: '4px',
-                                  fontSize: '0.8rem',
+                                  display: "inline-block",
+                                  color: "var(--secondary-dark-color)",
+                                  marginRight: "4px",
+                                  fontSize: "0.8rem",
                                 }}
                               >
                                 {index + 1}
@@ -2066,22 +1966,22 @@ function App() {
                             {note.isHidden && (
                               <MdVisibilityOff
                                 style={{
-                                  color: 'var(--hidden-color)',
-                                  marginRight: '4px',
-                                  fontSize: '0.8rem',
+                                  color: "var(--hidden-color)",
+                                  marginRight: "4px",
+                                  fontSize: "0.8rem",
                                 }}
                               />
                             )}
                             {note.isPinned && (
                               <FaMapPin
                                 style={{
-                                  marginRight: '4px',
-                                  color: 'var(--pin-color)',
-                                  fontSize: '0.8rem',
+                                  marginRight: "4px",
+                                  color: "var(--pin-color)",
+                                  fontSize: "0.8rem",
                                 }}
                               />
                             )}
-                            <span>{title.trim() || 'New Note'}</span>
+                            <span>{title.trim() || "New Note"}</span>
                           </div>
                           <button
                             className="note-list-item-delete-btn"
@@ -2091,15 +1991,13 @@ function App() {
                             }}
                             style={{
                               visibility:
-                                workspaceNotes.length > 1 &&
-                                index === selectedCmdKSuggestionIndex
-                                  ? 'visible'
-                                  : 'hidden',
+                                workspaceNotes.length > 1 && index === selectedCmdKSuggestionIndex
+                                  ? "visible"
+                                  : "hidden",
                               pointerEvents:
-                                workspaceNotes.length > 1 &&
-                                index === selectedCmdKSuggestionIndex
-                                  ? 'auto'
-                                  : 'none',
+                                workspaceNotes.length > 1 && index === selectedCmdKSuggestionIndex
+                                  ? "auto"
+                                  : "none",
                             }}
                           >
                             Delete
@@ -2108,19 +2006,19 @@ function App() {
                         <div
                           className="note-list-item-timestamp"
                           style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
                           }}
                         >
                           {note.workspace && (
                             <>
                               <span
                                 style={{
-                                  overflow: 'hidden',
-                                  whiteSpace: 'nowrap',
-                                  textOverflow: 'ellipsis',
-                                  direction: 'rtl',
+                                  overflow: "hidden",
+                                  whiteSpace: "nowrap",
+                                  textOverflow: "ellipsis",
+                                  direction: "rtl",
                                 }}
                               >
                                 {note.workspace}
@@ -2145,9 +2043,9 @@ function App() {
                       style={{
                         backgroundColor:
                           index === selectedCmdKSuggestionIndex
-                            ? 'var(--note-selected-background-color)'
-                            : 'var(--note-background-color)',
-                        position: 'relative',
+                            ? "var(--note-selected-background-color)"
+                            : "var(--note-background-color)",
+                        position: "relative",
                       }}
                     >
                       {color && (
@@ -2158,10 +2056,9 @@ function App() {
                             left: 0,
                             width: 3,
                             borderRadius: 4,
-                            position: 'absolute',
+                            position: "absolute",
                             background: color,
-                            opacity:
-                              index === selectedCmdKSuggestionIndex ? 1.0 : 0.5,
+                            opacity: index === selectedCmdKSuggestionIndex ? 1.0 : 0.5,
                           }}
                         ></div>
                       )}
@@ -2169,39 +2066,37 @@ function App() {
                         <div
                           className="note-list-item-title"
                           style={{
-                            fontWeight: 'normal',
-                            fontStyle: 'normal',
-                            color: 'var(--dark-color)',
+                            fontWeight: "normal",
+                            fontStyle: "normal",
+                            color: "var(--dark-color)",
                           }}
                         >
                           {title}
                         </div>
                         <p
                           style={{
-                            marginLeft: '4px',
-                            fontSize: '0.8rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            padding: '1px 4px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            color: 'var(--on-fill-color)',
-                            background: 'var(--keyboard-key-color)',
-                            borderRight: '2px solid var(--border-color)',
-                            borderBottom: '2px solid var(--border-color)',
-                            borderLeft: 'none',
-                            borderTop: 'none',
+                            marginLeft: "4px",
+                            fontSize: "0.8rem",
+                            display: "flex",
+                            alignItems: "center",
+                            padding: "1px 4px",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                            color: "var(--on-fill-color)",
+                            background: "var(--keyboard-key-color)",
+                            borderRight: "2px solid var(--border-color)",
+                            borderBottom: "2px solid var(--border-color)",
+                            borderLeft: "none",
+                            borderTop: "none",
                             visibility:
-                              index === selectedCmdKSuggestionIndex
-                                ? 'visible'
-                                : 'hidden',
+                              index === selectedCmdKSuggestionIndex ? "visible" : "hidden",
                           }}
                         >
-                          Enter{' '}
+                          Enter{" "}
                           <span
                             style={{
-                              marginLeft: '4px',
-                              marginBottom: '1px',
+                              marginLeft: "4px",
+                              marginBottom: "1px",
                             }}
                           >
                             ↵
@@ -2211,9 +2106,9 @@ function App() {
                       <div
                         className="note-list-item-timestamp"
                         style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
                         }}
                       >
                         <p>{content}</p>
@@ -2224,38 +2119,35 @@ function App() {
               </div>
               <div
                 style={{
-                  outline: 'none',
-                  padding: '4px 8px',
-                  fontSize: '0.75rem',
-                  borderTop: '1px solid var(--border-color)',
-                  color: 'var(--dark-color)',
-                  display: 'flex',
-                  justifyContent: 'flex-end',
+                  outline: "none",
+                  padding: "4px 8px",
+                  fontSize: "0.75rem",
+                  borderTop: "1px solid var(--border-color)",
+                  color: "var(--dark-color)",
+                  display: "flex",
+                  justifyContent: "flex-end",
                   opacity: 0.6,
                 }}
               >
-                {currentWorkspace
-                  ? `workspace: [${currentWorkspace}]`
-                  : `all notes`}
+                {currentWorkspace ? `workspace: [${currentWorkspace}]` : `all notes`}
               </div>
             </div>
           </>,
-          document.body,
+          document.body
         )}
       <input
         type="file"
-        style={{ display: 'none' }}
+        style={{ display: "none" }}
         ref={fileInputDomRef}
         onChange={(e) => {
           const fileReader = new FileReader();
           const target = e.target as HTMLInputElement;
           if (!target.files) return;
-          fileReader.readAsText(target.files[0], 'UTF-8');
+          fileReader.readAsText(target.files[0], "UTF-8");
           fileReader.onload = (e) => {
-            const decompressedContent =
-              LZString.decompressFromEncodedURIComponent(
-                e.target?.result as string,
-              );
+            const decompressedContent = LZString.decompressFromEncodedURIComponent(
+              e.target?.result as string
+            );
             if (decompressedContent) {
               const content = JSON.parse(decompressedContent);
               setDatabase(content);

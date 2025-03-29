@@ -40,7 +40,14 @@
     "build:electron": "tsc && vite build --config electron-vite.config.ts && electron-builder",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "open": "open release/0.0.1/mac-arm64/",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,css,md,json}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@seznam/compose-react-refs": "^1.0.6",
@@ -71,6 +78,9 @@
     "eslint": "^8.56.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.0",
+    "prettier": "^3.5.3",
     "typescript": "^5.2.2",
     "vite": "^5.1.0",
     "vite-plugin-electron": "^0.28.7",
