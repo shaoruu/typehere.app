@@ -42,7 +42,7 @@
     "open": "open release/0.0.1/mac-arm64/",
     "preview": "vite preview",
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
-    "prepare": "husky"
+    "prepare": "husky install"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,css,md,json}": [

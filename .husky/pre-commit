@@ -1,6 +1,12 @@
-# Load nvm and use the correct Node.js version
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-nvm use 20
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/h"
 
-yarn lint-staged
+# Load nvm (if available) and use the correct Node.js version
+export NVM_DIR="$HOME/.nvm"
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+  . "$NVM_DIR/nvm.sh"
+  nvm use 20 >/dev/null
+fi
+
+# Run lint-staged against staged files
+npx --no-install lint-staged
