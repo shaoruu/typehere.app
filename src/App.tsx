@@ -142,6 +142,7 @@ async function getFromDB<T>(key: string): Promise<T | undefined> {
 
     if (!db.objectStoreNames.contains(STORE_NAME)) {
       console.warn("Store not found, reinitializing database...");
+      closeAllConnections();
       await new Promise((resolve, reject) => {
         const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
         deleteRequest.onsuccess = () => resolve(undefined);
@@ -151,7 +152,24 @@ async function getFromDB<T>(key: string): Promise<T | undefined> {
     }
 
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORE_NAME, "readonly");
+      let transaction: IDBTransaction;
+      try {
+        transaction = db.transaction(STORE_NAME, "readonly");
+      } catch (error) {
+        console.error("Failed to create transaction:", error);
+        closeAllConnections();
+        // Try again after clearing the database
+        reject(error);
+        new Promise<void>((resolveDelete) => {
+          const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
+          deleteRequest.onsuccess = () => resolveDelete();
+          deleteRequest.onerror = () => resolveDelete();
+        }).then(() => {
+          getFromDB<T>(key).then(resolve).catch(reject);
+        });
+        return;
+      }
+
       const store = transaction.objectStore(STORE_NAME);
       const request = store.get(key);
 
@@ -180,6 +198,7 @@ async function setInDB<T>(key: string, value: T): Promise<void> {
 
     if (!db.objectStoreNames.contains(STORE_NAME)) {
       console.warn("Store not found, reinitializing database...");
+      closeAllConnections();
       await new Promise((resolve, reject) => {
         const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
         deleteRequest.onsuccess = () => resolve(undefined);
@@ -189,7 +208,24 @@ async function setInDB<T>(key: string, value: T): Promise<void> {
     }
 
     return new Promise((resolve, reject) => {
-      const transaction = db!.transaction(STORE_NAME, "readwrite");
+      let transaction: IDBTransaction;
+      try {
+        transaction = db!.transaction(STORE_NAME, "readwrite");
+      } catch (error) {
+        console.error("Failed to create transaction:", error);
+        closeAllConnections();
+        // Try again after clearing the database
+        reject(error);
+        new Promise<void>((resolveDelete) => {
+          const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
+          deleteRequest.onsuccess = () => resolveDelete();
+          deleteRequest.onerror = () => resolveDelete();
+        }).then(() => {
+          setInDB(key, value).then(resolve).catch(reject);
+        });
+        return;
+      }
+
       const store = transaction.objectStore(STORE_NAME);
       const request = store.put(value, key);
 
@@ -276,6 +312,34 @@ function usePersistentState<T extends string | number | boolean | object | null>
           }
         }
 
+        // Migration for notes without createdAt
+        if (storageKey === "typehere-database" && Array.isArray(value)) {
+          const migratedNotes = (value as Note[]).map((note) => {
+            if (!note.createdAt) {
+              return {
+                ...note,
+                createdAt: note.updatedAt || new Date().toISOString(),
+              };
+            }
+            return note;
+          });
+          value = migratedNotes as T;
+        }
+
+        // Migration for deleted notes backup
+        if (storageKey === "typehere-deletedNotes" && Array.isArray(value)) {
+          const migratedNotes = (value as Note[]).map((note) => {
+            if (!note.createdAt) {
+              return {
+                ...note,
+                createdAt: note.updatedAt || new Date().toISOString(),
+              };
+            }
+            return note;
+          });
+          value = migratedNotes as T;
+        }
+
         if (isMounted) {
           setData(value);
         }
@@ -342,6 +406,7 @@ const getRandomId = () => Math.random().toString(36).substring(2);
 type Note = {
   id: string;
   content: string;
+  createdAt: string;
   updatedAt: string;
   isPinned: boolean;
   isHidden: boolean;
@@ -368,6 +433,7 @@ const freshDatabase = [
   {
     id: getRandomId(),
     content: "",
+    createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     isPinned: false,
     isHidden: false,
@@ -536,6 +602,14 @@ async function getCurrentSchema(): Promise<DBSchema | undefined> {
     request.onsuccess = () => {
       const db = request.result;
       try {
+        // Check if the object store exists first
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          console.warn(`Object store ${STORE_NAME} does not exist`);
+          db.close();
+          resolve(undefined);
+          return;
+        }
+
         const transaction = db.transaction(STORE_NAME, "readonly");
         const store = transaction.objectStore(STORE_NAME);
         const schemaRequest = store.get("db_schema");
@@ -566,8 +640,33 @@ async function checkSchemaVersion() {
   return schema;
 }
 
+// Initialize and check database health at startup
+async function initializeDatabase() {
+  try {
+    // First check if we can access the schema
+    const schema = await checkSchemaVersion();
+    if (!schema) {
+      console.warn("No schema found or database corrupted, reinitializing...");
+      closeAllConnections();
+      await new Promise<void>((resolve) => {
+        const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
+        deleteRequest.onsuccess = () => resolve();
+        deleteRequest.onerror = () => {
+          console.error("Failed to delete database:", deleteRequest.error);
+          resolve(); // Continue anyway
+        };
+      });
+    }
+    // Initialize the database
+    await initDB();
+    console.log("Database initialized successfully");
+  } catch (error) {
+    console.error("Failed to initialize database:", error);
+  }
+}
+
 // Call it when the app starts
-checkSchemaVersion().catch(console.error);
+initializeDatabase().catch(console.error);
 
 const getCurrentTime = () => {
   const now = new Date();
@@ -578,6 +677,29 @@ const getCurrentTime = () => {
   const period = hour >= 12 ? "p" : "a";
   const hour12 = hour % 12 || 12;
   return `${month}${day}, ${hour12}:${minute}${period}`;
+};
+
+const formatDateCompact = (dateStr: string) => {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) {
+    const hour = date.getHours();
+    const minute = date.getMinutes().toString().padStart(2, "0");
+    const period = hour >= 12 ? "p" : "a";
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minute}${period}`;
+  } else if (diffDays === 1) {
+    return "yesterday";
+  } else if (diffDays < 7) {
+    return `${diffDays}d ago`;
+  } else {
+    const month = date.toLocaleString("default", { month: "short" }).toLowerCase();
+    const day = date.getDate();
+    return `${month}${day}`;
+  }
 };
 
 function App() {
@@ -732,6 +854,7 @@ function App() {
     const newNote: Note = {
       id: getRandomId(),
       content: defaultContent,
+      createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       workspace: (defaultWorkspace || currentWorkspace) ?? undefined,
       isPinned: false,
@@ -1923,7 +2046,9 @@ function App() {
                   if (suggestion.type === "note") {
                     const note = suggestion.note;
                     const title = getNoteTitle(note);
-                    const timestamp = new Date(note.updatedAt).toLocaleString();
+                    const createdFormatted = formatDateCompact(note.createdAt);
+                    const updatedFormatted = formatDateCompact(note.updatedAt);
+                    const showBothDates = note.createdAt !== note.updatedAt;
 
                     return (
                       <div
@@ -2009,6 +2134,8 @@ function App() {
                             display: "flex",
                             alignItems: "center",
                             gap: "4px",
+                            flexDirection: "row",
+                            flexWrap: "wrap",
                           }}
                         >
                           {note.workspace && (
@@ -2026,7 +2153,15 @@ function App() {
                               <span>•</span>
                             </>
                           )}
-                          <span>{timestamp}</span>
+                          {showBothDates ? (
+                            <>
+                              <span title="Created">{createdFormatted}</span>
+                              <span>→</span>
+                              <span title="Updated">{updatedFormatted}</span>
+                            </>
+                          ) : (
+                            <span>{updatedFormatted}</span>
+                          )}
                         </div>
                       </div>
                     );

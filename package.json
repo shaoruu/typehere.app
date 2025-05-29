@@ -26,11 +26,12 @@
       "artifactName": "${productName}_${version}.${ext}",
       "icon": "icons/icon.icns",
       "target": [
-        "dmg"
+        "zip"
       ],
       "notarize": false,
       "hardenedRuntime": false,
-      "identity": null
+      "identity": null,
+      "gatekeeperAssess": false
     }
   },
   "scripts": {
