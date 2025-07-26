@@ -6,6 +6,7 @@ import Fuse from "fuse.js";
 import AceEditor from "react-ace";
 import { FaMapPin } from "react-icons/fa";
 import { MdVisibilityOff } from "react-icons/md";
+import { FiMoreHorizontal } from "react-icons/fi";
 import isElectron from "is-electron";
 import "./App.css";
 
@@ -1899,11 +1900,13 @@ function App() {
             const rect = e.currentTarget.getBoundingClientRect();
             setMoreMenuPosition({
               x: window.innerWidth - (rect.x + rect.width),
-              y: window.innerHeight - rect.y + 4,
+              y: rect.y + rect.height + 4,
             });
           }}
+          aria-label="More"
+          title="More"
         >
-          more
+          <FiMoreHorizontal size={14} />
         </button>
         {moreMenuPosition && (
           <>
@@ -1923,7 +1926,7 @@ function App() {
               style={{
                 position: "fixed",
                 right: moreMenuPosition.x,
-                bottom: moreMenuPosition.y,
+                top: moreMenuPosition.y,
                 zIndex: 100,
               }}
               className="more-menu"

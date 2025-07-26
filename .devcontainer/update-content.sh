@@ -21,6 +21,6 @@ fi
 
 # Install dependencies
 echo "Installing project dependencies..."
-yarn install
+pnpm install
 
 echo "Update complete!" 

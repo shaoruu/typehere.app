@@ -131,10 +131,11 @@ input {
   gap: 6px;
   align-items: center;
   position: fixed;
-  bottom: 0px;
-  right: 0px;
-  margin: 8px;
-  transition: right 0.3s ease;
+  top: 6px;
+  right: 0;
+  margin: 0px 8px;
+  transition: right .3s ease;
+  z-index: 12;
 }
 
 /* Add this new rule */
@@ -144,16 +145,20 @@ body.show-scrollbar #controls {
 
 #controls button {
   cursor: pointer;
-  background: none;
-  border: 1px solid var(--border-color);
+  background: transparent;
+  border: none;
   border-radius: 6px;
-  padding: 2px 4px;
+  padding: 2px 6px;
   color: var(--dark-color);
-  background: var(--light-color);
+  opacity: 0.4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.1s ease;
 }
 
 #controls button:hover {
-  background-color: var(--hover-background-color);
+  opacity: 0.8;
 }
 
 .notes-list {
@@ -242,13 +247,16 @@ body.show-scrollbar #controls {
   padding: 2px;
   gap: 2px;
   position: fixed;
-  right: 0;
-  bottom: 0;
   z-index: 100;
   background-color: var(--light-color);
   border: 1px solid var(--border-color);
   box-shadow: 0 4px 6px var(--box-shadow-color);
   border-radius: 6px;
+}
+
+.more-menu,
+.more-menu button {
+  color: var(--dark-color);
 }
 
 .more-menu button {
@@ -309,7 +317,9 @@ body.show-scrollbar #controls {
 }
 
 .ace_placeholder {
-  padding-top: 32px !important;
+  padding-top: 33px !important;
+  padding-left: 2px !important;
+  font-size: 1rem;
 }
 
 .ace_search {
