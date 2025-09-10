@@ -669,15 +669,21 @@ async function initializeDatabase() {
 // Call it when the app starts
 initializeDatabase().catch(console.error);
 
+const formatDateYMD = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
 const getCurrentTime = () => {
   const now = new Date();
-  const month = now.toLocaleString("default", { month: "short" }).toLowerCase();
-  const day = now.getDate();
   const hour = now.getHours();
   const minute = now.getMinutes().toString().padStart(2, "0");
   const period = hour >= 12 ? "p" : "a";
   const hour12 = hour % 12 || 12;
-  return `${month}${day}, ${hour12}:${minute}${period}`;
+  const dayAbbr = now.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+  return `${dayAbbr} ${formatDateYMD(now)}, ${hour12}:${minute}${period}`;
 };
 
 const formatDateCompact = (dateStr: string) => {
@@ -697,9 +703,7 @@ const formatDateCompact = (dateStr: string) => {
   } else if (diffDays < 7) {
     return `${diffDays}d ago`;
   } else {
-    const month = date.toLocaleString("default", { month: "short" }).toLowerCase();
-    const day = date.getDate();
-    return `${month}${day}`;
+    return formatDateYMD(date);
   }
 };
 
