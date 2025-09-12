@@ -678,12 +678,17 @@ const formatDateYMD = (d: Date) => {
 
 const getCurrentTime = () => {
   const now = new Date();
+  const month = now.getMonth() + 1;
+  const day = now.getDate();
+  const year = now.getFullYear().toString().slice(-2); // Get last 2 digits of year
+  const dayAbbr = now.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
   const hour = now.getHours();
   const minute = now.getMinutes().toString().padStart(2, "0");
   const period = hour >= 12 ? "p" : "a";
   const hour12 = hour % 12 || 12;
-  const dayAbbr = now.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
-  return `${dayAbbr} ${formatDateYMD(now)}, ${hour12}:${minute}${period}`;
+  // Fix Thursday abbreviation
+  const fixedDayAbbr = dayAbbr === 'thu' ? 'thur' : dayAbbr;
+  return `${month}/${day}/${year} ${fixedDayAbbr} ${hour12}:${minute}${period}`;
 };
 
 const formatDateCompact = (dateStr: string) => {
@@ -703,7 +708,9 @@ const formatDateCompact = (dateStr: string) => {
   } else if (diffDays < 7) {
     return `${diffDays}d ago`;
   } else {
-    return formatDateYMD(date);
+    const month = date.toLocaleString("default", { month: "short" }).toLowerCase();
+    const day = date.getDate();
+    return `${month}${day}`;
   }
 };
 
