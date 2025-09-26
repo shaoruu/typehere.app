@@ -2087,7 +2087,7 @@ function App() {
               <div
                 className="notes-list no-scrollbar"
                 style={{
-                  maxHeight: "400px",
+                  maxHeight: "min(320px, 40vh)",
                   overflow: "auto",
                   display: "flex",
                   border: "none",
