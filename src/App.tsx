@@ -669,25 +669,18 @@ async function initializeDatabase() {
 // Call it when the app starts
 initializeDatabase().catch(console.error);
 
-const formatDateYMD = (d: Date) => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-};
-
 const getCurrentTime = () => {
   const now = new Date();
   const month = now.getMonth() + 1;
   const day = now.getDate();
   const year = now.getFullYear().toString().slice(-2); // Get last 2 digits of year
-  const dayAbbr = now.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+  const dayAbbr = now.toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
   const hour = now.getHours();
   const minute = now.getMinutes().toString().padStart(2, "0");
   const period = hour >= 12 ? "p" : "a";
   const hour12 = hour % 12 || 12;
   // Fix Thursday abbreviation
-  const fixedDayAbbr = dayAbbr === 'thu' ? 'thur' : dayAbbr;
+  const fixedDayAbbr = dayAbbr === "thu" ? "thur" : dayAbbr;
   return `${month}/${day}/${year} ${fixedDayAbbr} ${hour12}:${minute}${period}`;
 };
 
@@ -1557,6 +1550,16 @@ function App() {
         return;
       }
 
+      if (e.code === "KeyF" && (e.metaKey || e.ctrlKey) && e.shiftKey) {
+        e.preventDefault();
+        textareaDomRef.current?.blur();
+        setSelectedCmdKSuggestionIndex(0);
+        setIsCmdKMenuOpen(true);
+        setIsHelpMenuOpen(false);
+        setCmdKSearchQuery("@");
+        return;
+      }
+
       if (
         e.code === "Enter" &&
         (e.metaKey || e.ctrlKey) &&
@@ -1858,6 +1861,14 @@ function App() {
                     <div className="help-menu-shortcuts-keys">
                       <kbd>{cmdKey}</kbd>
                       <kbd>⇧</kbd>
+                      <kbd>f</kbd>
+                    </div>
+                    <span>Search all notes</span>
+                  </div>
+                  <div className="help-menu-shortcuts-item">
+                    <div className="help-menu-shortcuts-keys">
+                      <kbd>{cmdKey}</kbd>
+                      <kbd>⇧</kbd>
                       <kbd>⏎</kbd>
                     </div>
                     <span>Create empty note</span>
@@ -1960,19 +1971,38 @@ function App() {
               </button>
               <button
                 onClick={() => {
+                  setMoreMenuPosition(null);
                   backupDataToSafeLocation(database);
                 }}
               >
                 backup
               </button>
-              <button tabIndex={-1} onClick={exportDatabase}>
+              <button
+                tabIndex={-1}
+                onClick={() => {
+                  setMoreMenuPosition(null);
+                  exportDatabase();
+                }}
+              >
                 export
               </button>
-              <button tabIndex={-1} onClick={() => fileInputDomRef.current?.click()}>
+              <button
+                tabIndex={-1}
+                onClick={() => {
+                  setMoreMenuPosition(null);
+                  fileInputDomRef.current?.click();
+                }}
+              >
                 import
               </button>
               {textValue && (
-                <button tabIndex={-1} onClick={() => openNewNote("")}>
+                <button
+                  tabIndex={-1}
+                  onClick={() => {
+                    setMoreMenuPosition(null);
+                    openNewNote("");
+                  }}
+                >
                   new
                 </button>
               )}
@@ -1981,12 +2011,20 @@ function App() {
                   height: "1px",
                   width: "100%",
                   backgroundColor: "var(--border-color)",
+                  margin: "4px 6px",
+                  opacity: 0.5,
                 }}
               />
               <a href="https://github.com/shaoruu/typehere.app" target="_blank" rel="noreferrer">
                 <button tabIndex={-1}>github</button>
               </a>
-              <button tabIndex={-1} onClick={() => setIsHelpMenuOpen(true)}>
+              <button
+                tabIndex={-1}
+                onClick={() => {
+                  setMoreMenuPosition(null);
+                  setIsHelpMenuOpen(true);
+                }}
+              >
                 how
               </button>
             </div>
@@ -2016,13 +2054,14 @@ function App() {
                 position: "fixed",
                 top: "25%",
                 left: "50%",
-                width: "240px",
+                width: "360px",
+                maxWidth: "calc(100vw - 32px)",
                 transform: "translateX(-50%)",
                 backgroundColor: "var(--note-background-color)",
-                boxShadow: "0 4px 6px var(--box-shadow-color)",
+                boxShadow: "0 8px 16px var(--box-shadow-color)",
                 display: "flex",
                 flexDirection: "column",
-                borderRadius: 6,
+                borderRadius: 8,
                 border: "1px solid var(--border-color)",
               }}
             >
@@ -2036,24 +2075,25 @@ function App() {
                   setSelectedCmdKSuggestionIndex(0);
                 }}
                 style={{
-                  padding: "4px",
+                  padding: "8px 10px",
                   outline: "none",
                   border: "1px solid var(--border-color)",
-                  borderRadius: 4,
-                  margin: "6px",
-                  marginBottom: 0,
+                  borderRadius: 6,
+                  margin: "8px",
+                  marginBottom: 6,
+                  fontSize: "0.95rem",
                 }}
               />
               <div
                 className="notes-list no-scrollbar"
                 style={{
-                  maxHeight: "300px",
+                  maxHeight: "400px",
                   overflow: "auto",
                   display: "flex",
                   border: "none",
                   flexDirection: "column",
                   gap: 4,
-                  padding: 4,
+                  padding: "4px 8px 8px 8px",
                 }}
               >
                 {cmdKSuggestions.map((suggestion, index) => {
@@ -2269,13 +2309,13 @@ function App() {
               <div
                 style={{
                   outline: "none",
-                  padding: "4px 8px",
+                  padding: "6px 12px",
                   fontSize: "0.75rem",
                   borderTop: "1px solid var(--border-color)",
                   color: "var(--dark-color)",
                   display: "flex",
                   justifyContent: "flex-end",
-                  opacity: 0.6,
+                  opacity: 0.5,
                 }}
               >
                 {currentWorkspace ? `workspace: [${currentWorkspace}]` : `all notes`}

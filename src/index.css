@@ -173,16 +173,17 @@ body.show-scrollbar #controls {
 }
 
 .note-list-item {
-  padding: 6px 8px;
+  padding: 8px 10px;
   background-color: var(--note-background-color);
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 6px;
   width: 100%;
   display: flex;
   border: 1px solid transparent;
   flex-direction: column;
   gap: 4px;
   color: var(--dark-color);
+  transition: border-color 0.12s ease, background-color 0.12s ease;
 }
 
 .note-list-item:hover {
@@ -194,28 +195,29 @@ body.show-scrollbar #controls {
   align-items: center;
   justify-content: space-between;
   overflow: hidden;
-  gap: 4px;
+  gap: 6px;
 }
 
 .note-list-item-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  /* display: flex; */
-  /* align-items: center; */
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
 }
 
 .note-list-item-delete-btn {
   cursor: pointer;
-  background-color: var(
-    --delete-btn-background-color
-  ); /* Use CSS variable for consistency */
+  background-color: var(--delete-btn-background-color);
   border: none;
-  border-radius: 4px;
+  border-radius: 5px;
   color: var(--on-fill-color);
-  padding: 2px 4px;
+  padding: 3px 6px;
   font-size: 0.8rem;
-  margin-left: 4px; /* Ensure spacing between text and button */
+  margin-left: 6px;
+  transition: background-color 0.12s ease;
 }
 
 [data-theme='dark'] .note-list-item-delete-btn {
@@ -244,14 +246,14 @@ body.show-scrollbar #controls {
 .more-menu {
   display: flex;
   flex-direction: column;
-  padding: 2px;
-  gap: 2px;
+  padding: 6px;
+  gap: 1px;
   position: fixed;
   z-index: 100;
-  background-color: var(--light-color);
+  background-color: var(--note-background-color);
   border: 1px solid var(--border-color);
-  box-shadow: 0 4px 6px var(--box-shadow-color);
-  border-radius: 6px;
+  box-shadow: 0 8px 16px var(--box-shadow-color);
+  border-radius: 8px;
 }
 
 .more-menu,
@@ -260,10 +262,28 @@ body.show-scrollbar #controls {
 }
 
 .more-menu button {
-  text-align: start;
-  border-radius: 2px !important;
-  border: none !important;
-  padding: 2px 4px;
+  text-align: left;
+  border-radius: 5px;
+  border: none;
+  padding: 6px 12px;
+  background: transparent;
+  transition: background-color 0.12s ease;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.more-menu button:hover {
+  background-color: var(--hover-background-color);
+}
+
+.more-menu a {
+  text-decoration: none;
+  display: block;
+  width: 100%;
+}
+
+.more-menu a button {
+  width: 100%;
 }
 
 .help-menu {
