@@ -16,6 +16,12 @@ const textsToReplace: [string | RegExp, string][] = [
   ["+-", "±"],
 ];
 
+interface Snippet {
+  name: string;
+  description: string;
+  getValue: () => string;
+}
+
 const digitCount = 5;
 
 const DB_NAME = "typehere-db";
@@ -683,6 +689,14 @@ const getCurrentTime = () => {
   const fixedDayAbbr = dayAbbr === "thu" ? "thur" : dayAbbr;
   return `${month}/${day}/${year} ${fixedDayAbbr} ${hour12}:${minute}${period}`;
 };
+
+const snippets: Snippet[] = [
+  {
+    name: "time",
+    description: "Insert current date and time",
+    getValue: getCurrentTime,
+  },
+];
 
 const formatDateCompact = (dateStr: string) => {
   const date = new Date(dateStr);
@@ -1669,6 +1683,41 @@ function App() {
       editor.renderer.setShowGutter(false);
       editor.renderer.setShowPrintMargin(false);
       editor.resize();
+
+      const snippetCompleter = {
+        getCompletions: (
+          _editor: unknown,
+          session: { getLine: (row: number) => string },
+          pos: { row: number; column: number },
+          _prefix: string,
+          callback: (
+            error: null,
+            completions: { caption: string; snippet: string; meta: string; score: number }[]
+          ) => void
+        ) => {
+          const line = session.getLine(pos.row);
+          const beforeCursor = line.substring(0, pos.column);
+
+          const searchTerm = beforeCursor.substring(1).toLowerCase();
+          const completions = snippets
+            .filter((snippet) => snippet.name.toLowerCase().startsWith(searchTerm))
+            .map((snippet) => ({
+              caption: snippet.name,
+              snippet: snippet.getValue(),
+              meta: snippet.description,
+              score: 1000,
+            }));
+
+          callback(null, completions);
+        },
+      };
+
+      editor.completers = [snippetCompleter];
+      editor.setOptions({
+        enableBasicAutocompletion: true,
+        enableSnippets: true,
+        enableLiveAutocompletion: true,
+      });
     }
   }, []);
 
@@ -1690,9 +1739,16 @@ function App() {
     const compressedData = LZString.compressToEncodedURIComponent(JSON.stringify(database));
     const dataStr = "data:text/json;charset=utf-8," + compressedData;
 
+    // Generate filename with current date in format: notes_export_MMDDYY
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const year = String(now.getFullYear()).slice(-2);
+    const filename = `notes_export_${month}${day}${year}.json`;
+
     const downloadAnchorNode = document.createElement("a");
     downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "notes_export.json");
+    downloadAnchorNode.setAttribute("download", filename);
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
