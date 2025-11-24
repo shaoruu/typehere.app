@@ -1,12 +1,10 @@
-import { ipcRenderer, contextBridge } from 'electron';
+import { ipcRenderer, contextBridge } from "electron";
 
 // --------- Expose some API to the Renderer process ---------
-contextBridge.exposeInMainWorld('ipcRenderer', {
+contextBridge.exposeInMainWorld("ipcRenderer", {
   on(...args: Parameters<typeof ipcRenderer.on>) {
     const [channel, listener] = args;
-    return ipcRenderer.on(channel, (event, ...args) =>
-      listener(event, ...args),
-    );
+    return ipcRenderer.on(channel, (event, ...args) => listener(event, ...args));
   },
   off(...args: Parameters<typeof ipcRenderer.off>) {
     const [channel, ...omit] = args;
@@ -20,20 +18,33 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     const [channel, ...omit] = args;
     return ipcRenderer.invoke(channel, ...omit);
   },
+});
 
-  // You can expose other APTs you need here.
-  // ...
+contextBridge.exposeInMainWorld("electronFS", {
+  init: () => ipcRenderer.invoke("fs:init"),
+  setPassword: (password: string) => ipcRenderer.invoke("fs:set-password", password),
+  verifyPassword: (password: string) => ipcRenderer.invoke("fs:verify-password", password),
+  readNotes: (encryptionKey: string) => ipcRenderer.invoke("fs:read-notes", encryptionKey),
+  writeNote: (noteId: string, content: string, encryptionKey: string) =>
+    ipcRenderer.invoke("fs:write-note", noteId, content, encryptionKey),
+  deleteNote: (noteId: string, encryptionKey: string) =>
+    ipcRenderer.invoke("fs:delete-note", noteId, encryptionKey),
+  writeMetadata: (metadata: unknown, encryptionKey: string) =>
+    ipcRenderer.invoke("fs:write-metadata", metadata, encryptionKey),
+  startWatching: () => ipcRenderer.invoke("fs:start-watching"),
+  stopWatching: () => ipcRenderer.invoke("fs:stop-watching"),
+  onFileChanged: (callback: (data: { eventType: string; filename: string }) => void) => {
+    ipcRenderer.on("fs:file-changed", (_event, data) => callback(data));
+  },
 });
 
 // --------- Preload scripts loading ---------
-function domReady(
-  condition: DocumentReadyState[] = ['complete', 'interactive'],
-) {
+function domReady(condition: DocumentReadyState[] = ["complete", "interactive"]) {
   return new Promise((resolve) => {
     if (condition.includes(document.readyState)) {
       resolve(true);
     } else {
-      document.addEventListener('readystatechange', () => {
+      document.addEventListener("readystatechange", () => {
         if (condition.includes(document.readyState)) {
           resolve(true);
         }
@@ -90,12 +101,12 @@ function useLoading() {
   z-index: 9;
 }
     `;
-  const oStyle = document.createElement('style');
-  const oDiv = document.createElement('div');
+  const oStyle = document.createElement("style");
+  const oDiv = document.createElement("div");
 
-  oStyle.id = 'app-loading-style';
+  oStyle.id = "app-loading-style";
   oStyle.innerHTML = styleContent;
-  oDiv.className = 'app-loading-wrap';
+  oDiv.className = "app-loading-wrap";
   oDiv.innerHTML = `<div class="${className}"><div></div></div>`;
 
   return {
@@ -117,7 +128,7 @@ const { appendLoading, removeLoading } = useLoading();
 domReady().then(appendLoading);
 
 window.onmessage = (ev) => {
-  ev.data.payload === 'removeLoading' && removeLoading();
+  ev.data.payload === "removeLoading" && removeLoading();
 };
 
 setTimeout(removeLoading, 4999);

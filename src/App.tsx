@@ -8,6 +8,7 @@ import { FaMapPin } from "react-icons/fa";
 import { MdVisibilityOff } from "react-icons/md";
 import { FiMoreHorizontal } from "react-icons/fi";
 import isElectron from "is-electron";
+import { deriveKey } from "./crypto";
 import "./App.css";
 
 const textsToReplace: [string | RegExp, string][] = [
@@ -738,6 +739,12 @@ const formatDateCompact = (dateStr: string) => {
 function App() {
   const textareaDomRef = useRef<HTMLTextAreaElement>(null);
   const cmdKInputDomRef = useRef<HTMLInputElement>(null);
+
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isSettingPassword, setIsSettingPassword] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
+  const [fsInitialized, setFsInitialized] = useState(false);
 
   const [database, setDatabase] = usePersistentState<Note[]>("typehere-database", freshDatabase);
 
@@ -1817,8 +1824,187 @@ function App() {
 
       // Close all IndexedDB connections
       closeAllConnections();
+
+      if (isElectron() && window.electronFS) {
+        window.electronFS.stopWatching();
+      }
     };
   }, []);
+
+  useEffect(() => {
+    if (!isElectron() || !window.electronFS) {
+      return;
+    }
+
+    async function initializeFileSystem() {
+      try {
+        const { hasPasswordSet } = await window.electronFS!.init();
+
+        if (!hasPasswordSet) {
+          setIsSettingPassword(true);
+          setIsPasswordModalOpen(true);
+        } else {
+          setIsSettingPassword(false);
+          setIsPasswordModalOpen(true);
+        }
+      } catch (error) {
+        console.error("Error initializing filesystem:", error);
+      }
+    }
+
+    initializeFileSystem();
+  }, []);
+
+  useEffect(() => {
+    if (!isElectron() || !window.electronFS || !encryptionKey || fsInitialized) {
+      return;
+    }
+
+    const key = encryptionKey;
+
+    async function syncFromFilesystem() {
+      try {
+        const { notes, metadata } = await window.electronFS!.readNotes(key);
+
+        const notesList: Note[] = Object.entries(notes).map(([noteId, content]) => {
+          const meta =
+            (metadata as { notes?: Record<string, Partial<Note>> }).notes?.[noteId] || {};
+          return {
+            id: noteId,
+            content,
+            createdAt: meta.createdAt || new Date().toISOString(),
+            updatedAt: meta.updatedAt || new Date().toISOString(),
+            isPinned: meta.isPinned || false,
+            isHidden: meta.isHidden || false,
+            workspace: meta.workspace,
+          };
+        });
+
+        if (notesList.length > 0) {
+          setDatabase(sortNotes(notesList));
+        } else {
+          await syncToFilesystem();
+        }
+
+        await window.electronFS!.startWatching();
+        setFsInitialized(true);
+
+        window.electronFS!.onFileChanged(async () => {
+          const { notes: updatedNotes, metadata: updatedMetadata } =
+            await window.electronFS!.readNotes(key);
+
+          const updatedNotesList: Note[] = Object.entries(updatedNotes).map(([noteId, content]) => {
+            const meta =
+              (updatedMetadata as { notes?: Record<string, Partial<Note>> }).notes?.[noteId] || {};
+            return {
+              id: noteId,
+              content,
+              createdAt: meta.createdAt || new Date().toISOString(),
+              updatedAt: meta.updatedAt || new Date().toISOString(),
+              isPinned: meta.isPinned || false,
+              isHidden: meta.isHidden || false,
+              workspace: meta.workspace,
+            };
+          });
+
+          setDatabase(sortNotes(updatedNotesList));
+        });
+      } catch (error) {
+        console.error("Error syncing from filesystem:", error);
+      }
+    }
+
+    syncFromFilesystem();
+  }, [encryptionKey, fsInitialized]);
+
+  const lastSyncedDatabase = useRef<Note[]>([]);
+  const isSyncing = useRef(false);
+
+  const syncToFilesystem = useCallback(async () => {
+    if (!isElectron() || !window.electronFS || !encryptionKey || isSyncing.current) {
+      return;
+    }
+
+    isSyncing.current = true;
+
+    try {
+      const metadata = {
+        notes: database.reduce(
+          (acc, note) => {
+            acc[note.id] = {
+              createdAt: note.createdAt,
+              updatedAt: note.updatedAt,
+              isPinned: note.isPinned,
+              isHidden: note.isHidden,
+              workspace: note.workspace,
+            };
+            return acc;
+          },
+          {} as Record<string, Partial<Note>>
+        ),
+      };
+
+      await window.electronFS.writeMetadata(metadata, encryptionKey);
+
+      const changedNotes = database.filter((note) => {
+        const lastNote = lastSyncedDatabase.current.find((n) => n.id === note.id);
+        return (
+          !lastNote || lastNote.content !== note.content || lastNote.updatedAt !== note.updatedAt
+        );
+      });
+
+      for (const note of changedNotes) {
+        await window.electronFS.writeNote(note.id, note.content, encryptionKey);
+      }
+
+      lastSyncedDatabase.current = JSON.parse(JSON.stringify(database));
+    } catch (error) {
+      console.error("Error syncing to filesystem:", error);
+    } finally {
+      isSyncing.current = false;
+    }
+  }, [database, encryptionKey]);
+
+  useEffect(() => {
+    if (!isElectron() || !window.electronFS || !encryptionKey || !fsInitialized) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      syncToFilesystem();
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [database, encryptionKey, fsInitialized, syncToFilesystem]);
+
+  const handlePasswordSubmit = async () => {
+    if (!window.electronFS || !passwordInput) {
+      return;
+    }
+
+    try {
+      const { salt } = await window.electronFS.init();
+      const key = deriveKey(passwordInput, salt);
+
+      if (isSettingPassword) {
+        await window.electronFS.setPassword(passwordInput);
+        setEncryptionKey(key);
+        setIsPasswordModalOpen(false);
+        setPasswordInput("");
+      } else {
+        const isValid = await window.electronFS.verifyPassword(passwordInput);
+        if (isValid) {
+          setEncryptionKey(key);
+          setIsPasswordModalOpen(false);
+          setPasswordInput("");
+        } else {
+          alert("Incorrect password. Please try again.");
+        }
+      }
+    } catch (error) {
+      console.error("Error handling password:", error);
+    }
+  };
 
   return (
     <main
@@ -2415,6 +2601,100 @@ function App() {
           };
         }}
       />
+      {isPasswordModalOpen &&
+        isElectron() &&
+        createPortal(
+          <>
+            <div
+              style={{
+                width: "100vw",
+                height: "100vh",
+                position: "fixed",
+                background: "var(--overlay-background-color)",
+                top: 0,
+                left: 0,
+                zIndex: 1000,
+              }}
+            />
+            <div
+              style={{
+                zIndex: 1001,
+                position: "fixed",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: "360px",
+                maxWidth: "calc(100vw - 32px)",
+                backgroundColor: "var(--note-background-color)",
+                boxShadow: "0 8px 16px var(--box-shadow-color)",
+                borderRadius: 8,
+                border: "1px solid var(--border-color)",
+                padding: "24px",
+              }}
+            >
+              <h2
+                style={{
+                  margin: "0 0 8px 0",
+                  fontSize: "1.2rem",
+                  color: "var(--dark-color)",
+                }}
+              >
+                {isSettingPassword ? "Set Master Password" : "Enter Password"}
+              </h2>
+              <p
+                style={{
+                  margin: "0 0 16px 0",
+                  fontSize: "0.9rem",
+                  color: "var(--dark-color)",
+                  opacity: 0.7,
+                }}
+              >
+                {isSettingPassword
+                  ? "Create a password to encrypt your notes on disk for CLI access."
+                  : "Enter your password to unlock encrypted notes."}
+              </p>
+              <input
+                type="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handlePasswordSubmit();
+                  }
+                }}
+                placeholder="Password"
+                autoFocus
+                style={{
+                  width: "100%",
+                  padding: "8px 10px",
+                  outline: "none",
+                  border: "1px solid var(--border-color)",
+                  borderRadius: 6,
+                  fontSize: "0.95rem",
+                  marginBottom: "16px",
+                  backgroundColor: "var(--note-background-color)",
+                  color: "var(--dark-color)",
+                }}
+              />
+              <button
+                onClick={handlePasswordSubmit}
+                style={{
+                  width: "100%",
+                  padding: "8px 16px",
+                  backgroundColor: "var(--keyboard-key-color)",
+                  color: "var(--on-fill-color)",
+                  border: "1px solid var(--border-color)",
+                  borderRadius: 6,
+                  cursor: "pointer",
+                  fontSize: "0.95rem",
+                }}
+              >
+                {isSettingPassword ? "Set Password" : "Unlock"}
+              </button>
+            </div>
+          </>,
+          document.body
+        )}
     </main>
   );
 }

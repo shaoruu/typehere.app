@@ -39,6 +39,9 @@
     "dev:electron": "vite --config electron-vite.config.ts",
     "build": "tsc && vite build",
     "build:electron": "tsc && vite build --config electron-vite.config.ts && electron-builder",
+    "build:cli": "cd cli && go build -o th",
+    "install:cli": "pnpm run build:cli && cp cli/th ~/.local/bin/th && chmod +x ~/.local/bin/th",
+    "uninstall:cli": "node scripts/uninstall-cli.cjs",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "open": "open release/0.0.1/mac-arm64/",
     "preview": "vite preview",
@@ -49,6 +52,9 @@
     "*.{js,jsx,ts,tsx,css,md,json}": [
       "prettier --write"
     ]
+  },
+  "bin": {
+    "th": "./dist-cli/th.js"
   },
   "dependencies": {
     "@seznam/compose-react-refs": "^1.0.6",
@@ -67,6 +73,7 @@
   },
   "devDependencies": {
     "@types/crypto-js": "^4.2.2",
+    "@types/node": "^20.10.0",
     "@types/react": "^18.2.55",
     "@types/react-dom": "^18.2.19",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
@@ -76,6 +83,7 @@
     "electron": "^30.0.1",
     "electron-builder": "^24.13.3",
     "electron-updater": "^6.1.8",
+    "esbuild": "^0.27.0",
     "eslint": "^8.56.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
