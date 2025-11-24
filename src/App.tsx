@@ -679,15 +679,24 @@ const getCurrentTime = () => {
   const now = new Date();
   const month = now.getMonth() + 1;
   const day = now.getDate();
-  const year = now.getFullYear().toString().slice(-2); // Get last 2 digits of year
+  const year = now.getFullYear().toString().slice(-2);
   const dayAbbr = now.toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
   const hour = now.getHours();
   const minute = now.getMinutes().toString().padStart(2, "0");
   const period = hour >= 12 ? "p" : "a";
   const hour12 = hour % 12 || 12;
-  // Fix Thursday abbreviation
   const fixedDayAbbr = dayAbbr === "thu" ? "thur" : dayAbbr;
   return `${month}/${day}/${year} ${fixedDayAbbr} ${hour12}:${minute}${period}`;
+};
+
+const getCurrentDate = () => {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const day = now.getDate();
+  const year = now.getFullYear().toString().slice(-2);
+  const dayAbbr = now.toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
+  const fixedDayAbbr = dayAbbr === "thu" ? "thur" : dayAbbr;
+  return `${month}/${day}/${year} ${fixedDayAbbr}`;
 };
 
 const snippets: Snippet[] = [
@@ -695,6 +704,11 @@ const snippets: Snippet[] = [
     name: "time",
     description: "Insert current date and time",
     getValue: getCurrentTime,
+  },
+  {
+    name: "date",
+    description: "Insert current date",
+    getValue: getCurrentDate,
   },
 ];
 
