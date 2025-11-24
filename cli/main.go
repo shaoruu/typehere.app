@@ -24,7 +24,7 @@ const (
 	metadataFile = ".metadata.enc"
 	idMapFile    = ".id-map.enc"
 	sessionFile  = ".session"
-	sessionTTL   = 24 * time.Hour
+	sessionTTL   = 30 * 24 * time.Hour
 )
 
 var (
