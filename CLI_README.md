@@ -10,6 +10,7 @@ A command-line interface for accessing your Type Here notes with vim integration
 - Fuzzy search with support for hidden notes
 - Two-way sync with Electron app
 - Password-protected encryption
+- Session management - remember password for 24 hours
 
 ## Installation
 
@@ -73,6 +74,18 @@ This opens an interactive interface where you can:
 - **Ctrl+N** - Create a new note
 - **Ctrl+C** - Exit
 
+### Session Management
+
+The CLI remembers your password for 24 hours after successful authentication. This means you won't need to enter your password every time you run `th`.
+
+To manually clear your session and require password re-entry:
+
+```bash
+th logout
+```
+
+Sessions are stored securely in `~/.typehere/.session` with file permissions 0600 (readable only by you).
+
 ### Hidden Notes
 
 Hidden notes require at least 5 characters to match (prefix search) or an exact title match if less than 5 characters.
@@ -90,6 +103,7 @@ Notes are organized by workspace, displayed as `[workspace]` next to the note ti
   .metadata.enc     # Encrypted metadata (timestamps, workspaces, etc.)
   .id-map.enc       # Encrypted note ID to filename mapping
   .salt             # Salt for key derivation
+  .session          # Session file (stores encrypted key, expires after 24h)
 ```
 
 ## Security

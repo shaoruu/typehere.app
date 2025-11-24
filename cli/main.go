@@ -23,19 +23,23 @@ const (
 	saltFile     = ".salt"
 	metadataFile = ".metadata.enc"
 	idMapFile    = ".id-map.enc"
+	sessionFile  = ".session"
+	sessionTTL   = 24 * time.Hour
 )
 
 var (
 	titleStyle = lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("250"))
+			Foreground(lipgloss.Color("250")).
+			Align(lipgloss.Center)
 
 	selectedStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("0")).
 			Background(lipgloss.Color("250"))
 
 	helpStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("240"))
+			Foreground(lipgloss.Color("240")).
+			Align(lipgloss.Center)
 
 	errorStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("9"))
@@ -46,10 +50,13 @@ var (
 			Padding(1, 2).
 			Width(50)
 
-	searchBoxStyle = lipgloss.NewStyle().
+	modalStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("240")).
-			Padding(0, 1)
+			Padding(1, 2)
+
+	searchInputStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("250"))
 )
 
 type Note struct {
@@ -74,6 +81,11 @@ type NoteMetadata struct {
 	Workspace string    `json:"workspace,omitempty"`
 }
 
+type Session struct {
+	EncryptionKey string    `json:"encryptionKey"`
+	ExpiresAt     time.Time `json:"expiresAt"`
+}
+
 type state int
 
 const (
@@ -94,6 +106,7 @@ type model struct {
 	height        int
 	err           error
 	searchFocused bool
+	hasSession    bool
 }
 
 func initialModel() model {
@@ -106,11 +119,27 @@ func initialModel() model {
 	si.Placeholder = "Search notes..."
 	si.CharLimit = 100
 
-	return model{
+	m := model{
 		state:         passwordView,
 		passwordInput: pi,
 		searchInput:   si,
+		hasSession:    false,
 	}
+
+	if encryptionKey, err := loadSession(); err == nil {
+		m.encryptionKey = encryptionKey
+		m.hasSession = true
+		if err := m.loadNotesWithKey(); err == nil {
+			m.state = noteListView
+			m.searchInput.Blur()
+			m.searchFocused = false
+		} else {
+			m.hasSession = false
+			m.encryptionKey = nil
+		}
+	}
+
+	return m
 }
 
 func (m model) Init() tea.Cmd {
@@ -264,30 +293,33 @@ func (m model) passwordView() string {
 }
 
 func (m model) noteListView() string {
-	// Calculate available height for the list
-	// Title (1 line) + padding (1) + search box (3 lines) + padding (1) + help (1) + padding (2) = 9 lines
-	listHeight := m.height - 9
-	if listHeight < 1 {
-		listHeight = 1
+	modalWidth := 80
+	if m.width < modalWidth+10 {
+		modalWidth = m.width - 10
+	}
+	if modalWidth < 40 {
+		modalWidth = 40
 	}
 
-	var s strings.Builder
-
-	s.WriteString("\n\n")
-	s.WriteString(titleStyle.Render("Type Here"))
-	s.WriteString("\n\n")
-
-	// Make search box full width
-	searchWidth := m.width - 4
-	if searchWidth < 20 {
-		searchWidth = 20
+	maxModalHeight := m.height - 6
+	if maxModalHeight < 10 {
+		maxModalHeight = 10
 	}
-	fullWidthSearchStyle := searchBoxStyle.Copy().Width(searchWidth)
-	searchBox := fullWidthSearchStyle.Render(m.searchInput.View())
-	s.WriteString(searchBox)
-	s.WriteString("\n\n")
 
-	// Calculate which notes to show
+	listHeight := maxModalHeight - 8
+	if listHeight < 5 {
+		listHeight = 5
+	}
+
+	var content strings.Builder
+
+	content.WriteString(titleStyle.Width(modalWidth - 4).Render("Type Here"))
+	content.WriteString("\n\n")
+
+	searchWidth := modalWidth - 4
+	content.WriteString(searchInputStyle.Width(searchWidth).Render(m.searchInput.View()))
+	content.WriteString("\n\n")
+
 	start := m.cursor - listHeight/2
 	if start < 0 {
 		start = 0
@@ -301,11 +333,15 @@ func (m model) noteListView() string {
 		}
 	}
 
-	// Always render full height list
 	linesRendered := 0
 	if len(m.filteredNotes) == 0 {
-		s.WriteString(helpStyle.Render("No notes found"))
-		s.WriteString("\n")
+		emptyMsg := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("240")).
+			Width(modalWidth - 4).
+			Align(lipgloss.Center).
+			Render("No notes found")
+		content.WriteString(emptyMsg)
+		content.WriteString("\n")
 		linesRendered = 1
 	} else {
 		for i := start; i < end && i < len(m.filteredNotes); i++ {
@@ -315,26 +351,40 @@ func (m model) noteListView() string {
 
 			line := fmt.Sprintf("%s (%s)", title, timestamp)
 
-			if i == m.cursor {
-				s.WriteString(selectedStyle.Render(line))
-			} else {
-				s.WriteString(line)
+			if len(line) > modalWidth-4 {
+				line = line[:modalWidth-7] + "..."
 			}
-			s.WriteString("\n")
+
+			lineStyle := lipgloss.NewStyle().Width(modalWidth - 4)
+			if i == m.cursor {
+				content.WriteString(selectedStyle.Width(modalWidth - 4).Render(line))
+			} else {
+				content.WriteString(lineStyle.Render(line))
+			}
+			content.WriteString("\n")
 			linesRendered++
 		}
 	}
 
-	// Fill remaining space with empty lines to keep height consistent
 	for linesRendered < listHeight {
-		s.WriteString("\n")
+		content.WriteString(lipgloss.NewStyle().Width(modalWidth - 4).Render(""))
+		content.WriteString("\n")
 		linesRendered++
 	}
 
-	s.WriteString("\n")
-	s.WriteString(helpStyle.Render("[↑↓] Navigate [Enter] Open [Type] Search [Ctrl+N] New [Esc] Exit"))
+	content.WriteString("\n")
+	helpText := "[↑↓] Navigate [Enter] Open [Type] Search [Ctrl+N] New [Esc] Exit"
+	content.WriteString(helpStyle.Width(modalWidth - 4).Render(helpText))
 
-	return s.String()
+	modal := modalStyle.Width(modalWidth).Render(content.String())
+
+	return lipgloss.Place(
+		m.width,
+		m.height,
+		lipgloss.Center,
+		lipgloss.Center,
+		modal,
+	)
 }
 
 func (m *model) loadNotes(password string) error {
@@ -353,7 +403,23 @@ func (m *model) loadNotes(password string) error {
 
 	m.encryptionKey = deriveKey(password, string(saltBytes))
 
+	if err := m.loadNotesWithKey(); err != nil {
+		return err
+	}
+
+	saveSession(m.encryptionKey)
+	return nil
+}
+
+func (m *model) loadNotesWithKey() error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	baseDir := filepath.Join(homeDir, typehereDir)
 	idMapPath := filepath.Join(baseDir, idMapFile)
+
 	if _, err := os.Stat(idMapPath); os.IsNotExist(err) {
 		m.notes = []Note{}
 		m.filteredNotes = []Note{}
@@ -418,7 +484,6 @@ func (m *model) loadNotes(password string) error {
 		return m.notes[i].UpdatedAt.After(m.notes[j].UpdatedAt)
 	})
 
-	// Initially show only visible notes
 	m.filteredNotes = []Note{}
 	for _, note := range m.notes {
 		if !note.IsHidden {
@@ -637,7 +702,65 @@ func generateID() string {
 	return fmt.Sprintf("%d", time.Now().UnixNano())
 }
 
+func getSessionPath() string {
+	homeDir, _ := os.UserHomeDir()
+	return filepath.Join(homeDir, typehereDir, sessionFile)
+}
+
+func loadSession() ([]byte, error) {
+	sessionPath := getSessionPath()
+	data, err := os.ReadFile(sessionPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var session Session
+	if err := json.Unmarshal(data, &session); err != nil {
+		return nil, err
+	}
+
+	if time.Now().After(session.ExpiresAt) {
+		os.Remove(sessionPath)
+		return nil, fmt.Errorf("session expired")
+	}
+
+	return []byte(session.EncryptionKey), nil
+}
+
+func saveSession(encryptionKey []byte) error {
+	homeDir, _ := os.UserHomeDir()
+	baseDir := filepath.Join(homeDir, typehereDir)
+	os.MkdirAll(baseDir, 0700)
+
+	session := Session{
+		EncryptionKey: string(encryptionKey),
+		ExpiresAt:     time.Now().Add(sessionTTL),
+	}
+
+	data, err := json.Marshal(session)
+	if err != nil {
+		return err
+	}
+
+	sessionPath := getSessionPath()
+	return os.WriteFile(sessionPath, data, 0600)
+}
+
+func clearSession() error {
+	sessionPath := getSessionPath()
+	return os.Remove(sessionPath)
+}
+
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "logout" {
+		if err := clearSession(); err != nil {
+			fmt.Println("No active session")
+		} else {
+			fmt.Println("Session cleared")
+		}
+		return
+	}
+
 	p := tea.NewProgram(initialModel(), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error: %v\n", err)
