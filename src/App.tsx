@@ -1895,6 +1895,10 @@ function App() {
         setFsInitialized(true);
 
         window.electronFS!.onFileChanged(async () => {
+          if (aceEditorRef.current?.editor.isFocused()) {
+            return;
+          }
+
           const { notes: updatedNotes, metadata: updatedMetadata } =
             await window.electronFS!.readNotes(key);
 
