@@ -707,6 +707,11 @@ const snippets: Snippet[] = [
     getValue: getCurrentTime,
   },
   {
+    name: "now",
+    description: "Insert current date and time",
+    getValue: getCurrentTime,
+  },
+  {
     name: "date",
     description: "Insert current date",
     getValue: getCurrentDate,
