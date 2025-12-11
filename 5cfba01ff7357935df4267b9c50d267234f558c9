@@ -1,0 +1,8 @@
+AI Notes:
+
+src/App.tsx: +23[0],+694[1],+696-697[1],+698[0],+1712-1713[0]
+
+Conversations:
+
+[0]: e07d378f-a8b6-4bcc-8788-4173dcb92ef9; Prevent App.tsx content overwrite; claude-4.5-opus-high;
+[1]: 757a6f5e-d0e7-4dcb-8d67-65664306fbd4; Implement 'now' command; composer-dev-1206-high;
