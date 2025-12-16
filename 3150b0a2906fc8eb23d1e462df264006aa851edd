@@ -1,0 +1,11 @@
+version: 1
+conversationId: b9996930-4a3e-4cb0-82e7-7586bb29f44e
+title: null
+model: claude-4.5-opus-high-thinking
+mode: agent
+updatedAt: 1765884297118
+tldr: The user asked if the model has an image generation tool. This was the
+  only interaction in the conversation.
+overview: The user's intent was to find out if the model has an image generation
+  tool. The conversation consisted solely of this query.
+bullets: []
