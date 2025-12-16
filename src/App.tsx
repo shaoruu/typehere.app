@@ -923,6 +923,10 @@ function App() {
   const [hasVimNavigated, setHasVimNavigated] = useState(false);
   const [isUsingVim, setIsUsingVim] = usePersistentState<boolean>("typehere-vim", false);
   const [isNarrowScreen, setIsNarrowScreen] = usePersistentState<boolean>("typehere-narrow", false);
+  const [isIndentedWrap, setIsIndentedWrap] = usePersistentState<boolean>(
+    "typehere-indentedWrap",
+    false
+  );
   const [freshlyDeletedNotes, setFreshlyDeletedNotes] = useState<Note[]>([]);
   const [deletedNotesBackup, setDeletedNotesBackup] = usePersistentState<Note[]>(
     "typehere-deletedNotes",
@@ -1178,6 +1182,16 @@ function App() {
           color: "#AED581", // A gentle light green
           onAction: () => {
             setIsNarrowScreen(!isNarrowScreen);
+            return true;
+          },
+        },
+        {
+          type: "action",
+          title: "toggle indented wrap",
+          content: "turn " + (isIndentedWrap ? "off" : "on") + " indented soft wrap",
+          color: "#FFB74D",
+          onAction: () => {
+            setIsIndentedWrap(!isIndentedWrap);
             return true;
           },
         },
@@ -1699,7 +1713,6 @@ function App() {
       editor.commands.removeCommand("findprevious");
       editor.commands.removeCommand("findnext");
       editor.commands.removeCommand("removetolineend");
-      editor.getSession().setOption("indentedSoftWrap", false);
 
       // Memory optimizations
       editor.setOption("enableBasicAutocompletion", false);
@@ -1757,6 +1770,13 @@ function App() {
       editor.setKeyboardHandler("ace/keyboard/keybinding");
     }
   }, [isUsingVim]);
+
+  useEffect(() => {
+    if (!aceEditorRef.current) return;
+
+    const editor = aceEditorRef.current.editor;
+    editor.getSession().setOption("indentedSoftWrap", isIndentedWrap);
+  }, [isIndentedWrap]);
 
   const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
   const cmdKey = isMac ? "⌘" : "ctrl";
