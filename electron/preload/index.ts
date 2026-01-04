@@ -20,6 +20,8 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
   },
 });
 
+let fileChangedListener: ((_event: Electron.IpcRendererEvent, data: { eventType: string; filename: string }) => void) | null = null;
+
 contextBridge.exposeInMainWorld("electronFS", {
   init: () => ipcRenderer.invoke("fs:init"),
   setPassword: (password: string) => ipcRenderer.invoke("fs:set-password", password),
@@ -34,7 +36,17 @@ contextBridge.exposeInMainWorld("electronFS", {
   startWatching: () => ipcRenderer.invoke("fs:start-watching"),
   stopWatching: () => ipcRenderer.invoke("fs:stop-watching"),
   onFileChanged: (callback: (data: { eventType: string; filename: string }) => void) => {
-    ipcRenderer.on("fs:file-changed", (_event, data) => callback(data));
+    if (fileChangedListener) {
+      ipcRenderer.off("fs:file-changed", fileChangedListener);
+    }
+    fileChangedListener = (_event, data) => callback(data);
+    ipcRenderer.on("fs:file-changed", fileChangedListener);
+  },
+  offFileChanged: () => {
+    if (fileChangedListener) {
+      ipcRenderer.off("fs:file-changed", fileChangedListener);
+      fileChangedListener = null;
+    }
   },
 });
 

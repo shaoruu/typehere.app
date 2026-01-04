@@ -12,6 +12,7 @@ export interface ElectronFS {
   startWatching: () => Promise<boolean>;
   stopWatching: () => Promise<boolean>;
   onFileChanged: (callback: (data: { eventType: string; filename: string }) => void) => void;
+  offFileChanged: () => void;
 }
 
 declare global {

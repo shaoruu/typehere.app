@@ -1880,6 +1880,10 @@ function App() {
     initializeFileSystem();
   }, []);
 
+  const lastSyncedDatabase = useRef<Note[]>([]);
+  const isSyncing = useRef(false);
+  const isWritingToFs = useRef(false);
+
   useEffect(() => {
     if (!isElectron() || !window.electronFS || !encryptionKey || fsInitialized) {
       return;
@@ -1915,6 +1919,10 @@ function App() {
         setFsInitialized(true);
 
         window.electronFS!.onFileChanged(async () => {
+          if (isWritingToFs.current) {
+            return;
+          }
+
           if (aceEditorRef.current?.editor.isFocused()) {
             return;
           }
@@ -1944,10 +1952,13 @@ function App() {
     }
 
     syncFromFilesystem();
-  }, [encryptionKey, fsInitialized]);
 
-  const lastSyncedDatabase = useRef<Note[]>([]);
-  const isSyncing = useRef(false);
+    return () => {
+      if (window.electronFS) {
+        window.electronFS.offFileChanged();
+      }
+    };
+  }, [encryptionKey, fsInitialized]);
 
   const syncToFilesystem = useCallback(async () => {
     if (!isElectron() || !window.electronFS || !encryptionKey || isSyncing.current) {
@@ -1955,6 +1966,7 @@ function App() {
     }
 
     isSyncing.current = true;
+    isWritingToFs.current = true;
 
     try {
       const metadata = {
@@ -1991,6 +2003,9 @@ function App() {
       console.error("Error syncing to filesystem:", error);
     } finally {
       isSyncing.current = false;
+      setTimeout(() => {
+        isWritingToFs.current = false;
+      }, 500);
     }
   }, [database, encryptionKey]);
 
@@ -2082,7 +2097,7 @@ function App() {
               column: e.cursor.column,
             });
           }}
-          tabSize={4}
+          tabSize={2}
           keyboardHandler="vim"
           width="100%"
           height="100%"
