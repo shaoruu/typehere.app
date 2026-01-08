@@ -423,17 +423,17 @@ type Note = {
 
 type CmdKSuggestion =
   | {
-      type: "note";
-      note: Note;
-    }
+    type: "note";
+    note: Note;
+  }
   | {
-      type: "action";
-      title: string;
-      content: string;
-      color?: string;
-      // return true to close the cmd-k menu
-      onAction: () => boolean;
-    };
+    type: "action";
+    title: string;
+    content: string;
+    color?: string;
+    // return true to close the cmd-k menu
+    onAction: () => boolean;
+  };
 
 const cmdKSuggestionActionType = "action" as const;
 
@@ -1072,7 +1072,7 @@ function App() {
             firstLineWithWorkspace:
               firstLineBreakIndex !== -1
                 ? note.content.slice(0, firstLineBreakIndex) +
-                  (note.workspace ? ` (${note.workspace})` : "")
+                (note.workspace ? ` (${note.workspace})` : "")
                 : note.content + (note.workspace ? ` ${note.workspace}` : ""),
           };
         });
@@ -1092,7 +1092,7 @@ function App() {
             (processedCmdKSearchQuery.length >= hiddenNotesMatchLength
               ? noteTitleLower.startsWith(queryLower)
               : // if less than the limit, must be exact match
-                noteTitleLower === queryLower)
+              noteTitleLower === queryLower)
           );
         })
         .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
@@ -1251,129 +1251,129 @@ function App() {
       const prioritizedActions: CmdKSuggestion[] = [
         ...(processedCmdKSearchQuery
           ? [
-              ...(workspaces.length > 0
-                ? [
-                    ...workspaces.slice(0, 3).map((workspace) => ({
-                      type: cmdKSuggestionActionType,
-                      title: `go to ${workspace.label}`,
-                      content: `↓[${workspace.label}]`,
-                      color: "#2196F3",
-                      onAction() {
-                        openWorkspace(workspace.value);
-                        setCmdKSearchQuery("");
-                        return false;
-                      },
-                    })),
-                  ]
-                : []),
-            ]
+            ...(workspaces.length > 0
+              ? [
+                ...workspaces.slice(0, 3).map((workspace) => ({
+                  type: cmdKSuggestionActionType,
+                  title: `go to ${workspace.label}`,
+                  content: `↓[${workspace.label}]`,
+                  color: "#2196F3",
+                  onAction() {
+                    openWorkspace(workspace.value);
+                    setCmdKSearchQuery("");
+                    return false;
+                  },
+                })),
+              ]
+              : []),
+          ]
           : []),
       ];
 
       const actions: CmdKSuggestion[] = [
         ...(processedCmdKSearchQuery
           ? [
-              ...(regularCommandsResults.length > 0
-                ? regularCommandsResults.map((result) => result.item)
-                : []),
+            ...(regularCommandsResults.length > 0
+              ? regularCommandsResults.map((result) => result.item)
+              : []),
 
-              {
-                type: cmdKSuggestionActionType,
-                title: "create new note",
-                content: `"${trimmedContent}"`,
-                color: "#4CAF50",
-                onAction: () => {
-                  openNewNote(processedCmdKSearchQuery);
-                  setIsCmdKMenuOpen(false);
-                  setSelectedCmdKSuggestionIndex(0);
-                  setCmdKSearchQuery("");
-                  return true;
-                },
+            {
+              type: cmdKSuggestionActionType,
+              title: "create new note",
+              content: `"${trimmedContent}"`,
+              color: "#4CAF50",
+              onAction: () => {
+                openNewNote(processedCmdKSearchQuery);
+                setIsCmdKMenuOpen(false);
+                setSelectedCmdKSuggestionIndex(0);
+                setCmdKSearchQuery("");
+                return true;
               },
-              ...(workspaces.length > 0
-                ? [
-                    {
-                      type: cmdKSuggestionActionType,
-                      title: `move note to ${workspaces[0].label}`,
-                      content: `→[${workspaces[0].label}]`,
-                      color: "#00BCD4",
-                      onAction() {
-                        if (!currentNote) {
-                          console.warn("weird weird weird");
-                          return true;
-                        }
-                        moveNoteToWorkspace(currentNote, workspaces[0]?.value ?? undefined);
-                        setCmdKSearchQuery("");
-                        return false;
-                      },
-                    },
-                  ]
-                : []),
+            },
+            ...(workspaces.length > 0
+              ? [
+                {
+                  type: cmdKSuggestionActionType,
+                  title: `move note to ${workspaces[0].label}`,
+                  content: `→[${workspaces[0].label}]`,
+                  color: "#00BCD4",
+                  onAction() {
+                    if (!currentNote) {
+                      console.warn("weird weird weird");
+                      return true;
+                    }
+                    moveNoteToWorkspace(currentNote, workspaces[0]?.value ?? undefined);
+                    setCmdKSearchQuery("");
+                    return false;
+                  },
+                },
+              ]
+              : []),
 
-              ...(availableWorkspaces.find((workspace) => workspace === processedCmdKSearchQuery)
-                ? currentWorkspace
-                  ? []
-                  : []
-                : [
-                    {
-                      type: cmdKSuggestionActionType,
-                      title: "create workspace",
-                      color: "#FF9800",
-                      content: `+[${trimmedContent}]`,
-                      onAction: () => {
-                        openNewNote("", processedCmdKSearchQuery, false);
-                        setSelectedCmdKSuggestionIndex(0);
-                        setCurrentWorkspace(processedCmdKSearchQuery);
-                        setCmdKSearchQuery("");
-                        return false;
-                      },
-                    },
-                  ]),
-              ...(currentWorkspace
-                ? [
-                    {
-                      type: cmdKSuggestionActionType,
-                      title: "rename workspace",
-                      content: `±[${trimmedContent}]`,
-                      color: "#9C27B0",
-                      onAction: () => {
-                        const newDatabase = [...database].map((n) => {
-                          if (n.workspace !== currentWorkspace) {
-                            return n;
-                          }
-                          return {
-                            ...n,
-                            workspace: processedCmdKSearchQuery,
-                          };
-                        });
-                        setCurrentWorkspace(processedCmdKSearchQuery);
-                        setSelectedCmdKSuggestionIndex(0);
-                        setDatabase(newDatabase);
-                        setCmdKSearchQuery("");
-                        return false;
-                      },
-                    },
-                  ]
-                : []),
-            ]
+            ...(availableWorkspaces.find((workspace) => workspace === processedCmdKSearchQuery)
+              ? currentWorkspace
+                ? []
+                : []
+              : [
+                {
+                  type: cmdKSuggestionActionType,
+                  title: "create workspace",
+                  color: "#FF9800",
+                  content: `+[${trimmedContent}]`,
+                  onAction: () => {
+                    openNewNote("", processedCmdKSearchQuery, false);
+                    setSelectedCmdKSuggestionIndex(0);
+                    setCurrentWorkspace(processedCmdKSearchQuery);
+                    setCmdKSearchQuery("");
+                    return false;
+                  },
+                },
+              ]),
+            ...(currentWorkspace
+              ? [
+                {
+                  type: cmdKSuggestionActionType,
+                  title: "rename workspace",
+                  content: `±[${trimmedContent}]`,
+                  color: "#9C27B0",
+                  onAction: () => {
+                    const newDatabase = [...database].map((n) => {
+                      if (n.workspace !== currentWorkspace) {
+                        return n;
+                      }
+                      return {
+                        ...n,
+                        workspace: processedCmdKSearchQuery,
+                      };
+                    });
+                    setCurrentWorkspace(processedCmdKSearchQuery);
+                    setSelectedCmdKSuggestionIndex(0);
+                    setDatabase(newDatabase);
+                    setCmdKSearchQuery("");
+                    return false;
+                  },
+                },
+              ]
+              : []),
+          ]
           : []),
         ...(currentNote?.workspace &&
-        processedCmdKSearchQuery &&
-        unlinkTitle.includes(processedCmdKSearchQuery)
+          processedCmdKSearchQuery &&
+          unlinkTitle.includes(processedCmdKSearchQuery)
           ? [
-              {
-                type: cmdKSuggestionActionType,
-                title: unlinkTitle,
-                content: `-[${currentNote.workspace}]`,
-                color: "#F44336",
-                onAction() {
-                  currentNote.workspace = undefined;
-                  setDatabase(sortNotes(database));
-                  setCurrentWorkspace(null);
-                  return false;
-                },
+            {
+              type: cmdKSuggestionActionType,
+              title: unlinkTitle,
+              content: `-[${currentNote.workspace}]`,
+              color: "#F44336",
+              onAction() {
+                currentNote.workspace = undefined;
+                setDatabase(sortNotes(database));
+                setCurrentWorkspace(null);
+                return false;
               },
-            ]
+            },
+          ]
           : []),
       ];
 
@@ -2021,6 +2021,14 @@ function App() {
     return () => clearTimeout(timeoutId);
   }, [database, encryptionKey, fsInitialized, syncToFilesystem]);
 
+  useEffect(() => {
+    document.fonts.ready.then(() => {
+      if (aceEditorRef.current) {
+        aceEditorRef.current.editor.renderer.updateFull();
+      }
+    });
+  }, []);
+
   const handlePasswordSubmit = async () => {
     if (!window.electronFS || !passwordInput) {
       return;
@@ -2055,9 +2063,9 @@ function App() {
       style={{
         ...(isNarrowScreen
           ? {
-              maxWidth: "calc(800px + 64px)",
-              margin: "0 auto",
-            }
+            maxWidth: "calc(800px + 64px)",
+            margin: "0 auto",
+          }
           : {}),
       }}
     >
@@ -2089,6 +2097,7 @@ function App() {
             wrap: true,
             highlightActiveLine: false,
             showPrintMargin: false,
+            fontFamily: "'Berkeley Mono', 'JetBrains Mono', monospace",
           }}
           fontSize="1rem"
           onCursorChange={(e) => {
