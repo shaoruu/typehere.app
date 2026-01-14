@@ -411,6 +411,10 @@ const searchAllNotesKeys = ["@", ">"];
 
 const getRandomId = () => Math.random().toString(36).substring(2);
 
+type NoteConfig = {
+  indentedWrap?: boolean;
+};
+
 type Note = {
   id: string;
   content: string;
@@ -419,6 +423,7 @@ type Note = {
   isPinned: boolean;
   isHidden: boolean;
   workspace?: string;
+  config?: NoteConfig;
 };
 
 type CmdKSuggestion =
@@ -786,6 +791,27 @@ function App() {
       : sortNotes((database ?? []).filter((n) => n.workspace === currentWorkspace || n.isPinned));
   }, [database, currentWorkspace]);
 
+  const currentNote = useMemo(() => {
+    return database?.find((n) => n.id === currentNoteId);
+  }, [database, currentNoteId]);
+
+  const isIndentedWrap = currentNote?.config?.indentedWrap ?? true;
+
+  const setIsIndentedWrap = useCallback(
+    (value: boolean) => {
+      if (!currentNote || !database) return;
+      const updatedNote = {
+        ...currentNote,
+        config: {
+          ...currentNote.config,
+          indentedWrap: value,
+        },
+      };
+      setDatabase(database.map((n) => (n.id === currentNote.id ? updatedNote : n)));
+    },
+    [currentNote, database, setDatabase]
+  );
+
   const availableWorkspaces = useMemo(() => {
     const seenWorkspaces = new Set<string>();
     const allWorkspaces: string[] = [];
@@ -923,10 +949,6 @@ function App() {
   const [hasVimNavigated, setHasVimNavigated] = useState(false);
   const [isUsingVim, setIsUsingVim] = usePersistentState<boolean>("typehere-vim", false);
   const [isNarrowScreen, setIsNarrowScreen] = usePersistentState<boolean>("typehere-narrow", false);
-  const [isIndentedWrap, setIsIndentedWrap] = usePersistentState<boolean>(
-    "typehere-indentedWrap",
-    false
-  );
   const [freshlyDeletedNotes, setFreshlyDeletedNotes] = useState<Note[]>([]);
   const [deletedNotesBackup, setDeletedNotesBackup] = usePersistentState<Note[]>(
     "typehere-deletedNotes",
@@ -1187,8 +1209,8 @@ function App() {
         },
         {
           type: "action",
-          title: "toggle indented wrap",
-          content: "turn " + (isIndentedWrap ? "off" : "on") + " indented soft wrap",
+          title: "toggle indented wrap (this note)",
+          content: "turn " + (isIndentedWrap ? "off" : "on") + " indented soft wrap for this note",
           color: "#FFB74D",
           onAction: () => {
             setIsIndentedWrap(!isIndentedWrap);
