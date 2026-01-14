@@ -854,7 +854,7 @@ function App() {
     }
   };
 
-  const deleteNote = (noteId: string) => {
+  const deleteNote = async (noteId: string) => {
     const deletedNote = database?.find((note) => note.id === noteId);
     if (!deletedNote || !database) return;
     setFreshlyDeletedNotes((prev) => [...prev, deletedNote]);
@@ -864,6 +864,9 @@ function App() {
     if (currentNoteId === noteId) {
       setCurrentNoteId(updatedDatabase[0]?.id || "");
       setTextValue(updatedDatabase[0]?.content || "");
+    }
+    if (isElectron() && window.electronFS && encryptionKey) {
+      await window.electronFS.deleteNote(noteId, encryptionKey);
     }
   };
 
@@ -1830,24 +1833,6 @@ function App() {
     }
   }, [shouldShowScrollbar]);
 
-  useEffect(() => {
-    if (!isElectron()) return;
-
-    const adjustTitleBarSize = () => {
-      const zoomLevel = window.devicePixelRatio;
-      const titleBar = document.querySelector(".custom-title-bar");
-      if (titleBar) {
-        (titleBar as HTMLElement).style.height = `${28 / zoomLevel}px`;
-      }
-    };
-
-    window.addEventListener("resize", adjustTitleBarSize);
-    adjustTitleBarSize(); // Initial adjustment
-
-    return () => {
-      window.removeEventListener("resize", adjustTitleBarSize);
-    };
-  }, []);
 
   const [currentTime, setCurrentTime] = useState(getCurrentTime());
 
@@ -1932,6 +1917,7 @@ function App() {
         });
 
         if (notesList.length > 0) {
+          lastSyncedDatabase.current = JSON.parse(JSON.stringify(notesList));
           setDatabase(sortNotes(notesList));
         } else {
           await syncToFilesystem();
@@ -1966,6 +1952,7 @@ function App() {
             };
           });
 
+          lastSyncedDatabase.current = JSON.parse(JSON.stringify(updatedNotesList));
           setDatabase(sortNotes(updatedNotesList));
         });
       } catch (error) {
@@ -2073,86 +2060,601 @@ function App() {
   };
 
   return (
-    <main
-      style={{
-        ...(isNarrowScreen
-          ? {
-              maxWidth: "calc(800px + 64px)",
-              margin: "0 auto",
-            }
-          : {}),
-      }}
-    >
-      {isElectron() && (
-        <div className="custom-title-bar">
-          <div className="traffic-light-placeholder"></div>
-          <div className="drag-region"></div>
-        </div>
-      )}
-      <div
+    <>
+      {isElectron() && <div className="custom-title-bar" />}
+      <main
         style={{
-          width: "100%",
-          height: isElectron() ? "calc(100vh - 28px)" : "100vh", // Adjust height based on whether it's Electron
-          padding: isNarrowScreen ? "0px" : "0 36px",
-          ...(shouldShowScrollbar ? { paddingRight: "0px" } : {}),
+          ...(isNarrowScreen
+            ? {
+                maxWidth: "calc(800px + 64px)",
+                margin: "0 auto",
+              }
+            : {}),
         }}
       >
-        <AceEditor
-          theme={currentTheme === "dark" ? "clouds_midnight" : "clouds"}
-          ref={aceEditorRef}
-          value={textValue}
-          onChange={(newText: string) => {
-            setTextValue(newText);
-            saveNote(currentNoteId, newText);
-          }}
-          setOptions={{
-            showLineNumbers: false,
-            showGutter: false,
-            wrap: true,
-            highlightActiveLine: false,
-            showPrintMargin: false,
-          }}
-          fontSize="1rem"
-          onCursorChange={(e) => {
-            setLastAceCursorPosition({
-              row: e.cursor.row,
-              column: e.cursor.column,
-            });
-          }}
-          tabSize={2}
-          keyboardHandler="vim"
-          width="100%"
-          height="100%"
-          className="editor"
-          onLoad={() => {
-            const aceScroller = document.querySelector(".ace_scrollbar") as HTMLElement;
-            if (aceScroller) {
-              aceScroller.style.visibility = shouldShowScrollbar ? "visible" : "hidden";
-            }
-          }}
-          style={{
-            lineHeight: "1.5",
-            background: "var(--note-background-color)",
-            color: "var(--dark-color)",
-          }}
-          placeholder="Type here..."
-        />
-      </div>
-      <div id="controls">
         <div
           style={{
-            color: "var(--dark-color)",
-            opacity: 0.5,
-            fontSize: "0.8rem",
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
+            width: "100%",
+            height: isElectron() ? "calc(100vh - 28px)" : "100vh",
+            paddingLeft: isNarrowScreen ? 0 : 36,
+            paddingRight: shouldShowScrollbar ? 0 : isNarrowScreen ? 0 : 36,
           }}
         >
-          {currentWorkspace && <span>[{currentWorkspace}]</span>}
-          <span>[{currentTime}]</span>
+          <AceEditor
+            theme={currentTheme === "dark" ? "clouds_midnight" : "clouds"}
+            ref={aceEditorRef}
+            value={textValue}
+            onChange={(newText: string) => {
+              setTextValue(newText);
+              saveNote(currentNoteId, newText);
+            }}
+            setOptions={{
+              showLineNumbers: false,
+              showGutter: false,
+              wrap: true,
+              highlightActiveLine: false,
+              showPrintMargin: false,
+            }}
+            fontSize="1rem"
+            onCursorChange={(e) => {
+              setLastAceCursorPosition({
+                row: e.cursor.row,
+                column: e.cursor.column,
+              });
+            }}
+            tabSize={2}
+            keyboardHandler="vim"
+            width="100%"
+            height="100%"
+            className="editor"
+            onLoad={(editor) => {
+              if (isElectron()) {
+                editor.renderer.setPadding(70);
+              }
+              const aceScroller = document.querySelector(".ace_scrollbar") as HTMLElement;
+              if (aceScroller) {
+                aceScroller.style.visibility = shouldShowScrollbar ? "visible" : "hidden";
+              }
+            }}
+            style={{
+              lineHeight: "1.5",
+              background: "var(--note-background-color)",
+              color: "var(--dark-color)",
+            }}
+            placeholder="Type here..."
+          />
         </div>
-        {isHelpMenuOpen &&
+        <div id="controls">
+          <div
+            style={{
+              color: "var(--dark-color)",
+              opacity: 0.5,
+              fontSize: "0.8rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+            }}
+          >
+            {currentWorkspace && <span>[{currentWorkspace}]</span>}
+            <span>[{currentTime}]</span>
+          </div>
+          {isHelpMenuOpen &&
+            createPortal(
+              <>
+                <div
+                  style={{
+                    width: "100vw",
+                    height: "100vh",
+                    position: "fixed",
+                    background: "var(--overlay-background-color)",
+                    top: 0,
+                    left: 0,
+                    zIndex: 10,
+                  }}
+                  onClick={() => {
+                    setIsHelpMenuOpen(false);
+                  }}
+                />
+                <div className="help-menu">
+                  <h3>Keyboard Shortcuts</h3>
+                  <div className="help-menu-shortcuts">
+                    <div className="help-menu-shortcuts-item">
+                      <div className="help-menu-shortcuts-keys">
+                        <kbd>{cmdKey}</kbd>
+                        <kbd>k/p</kbd>
+                      </div>
+                      <span>Open notes search</span>
+                    </div>
+                    <div className="help-menu-shortcuts-item">
+                      <div className="help-menu-shortcuts-keys">
+                        <kbd>{cmdKey}</kbd>
+                        <kbd>⇧</kbd>
+                        <kbd>f</kbd>
+                      </div>
+                      <span>Search all notes</span>
+                    </div>
+                    <div className="help-menu-shortcuts-item">
+                      <div className="help-menu-shortcuts-keys">
+                        <kbd>{cmdKey}</kbd>
+                        <kbd>⇧</kbd>
+                        <kbd>⏎</kbd>
+                      </div>
+                      <span>Create empty note</span>
+                    </div>
+                    <div className="help-menu-shortcuts-item">
+                      <div className="help-menu-shortcuts-keys">
+                        <kbd>{cmdKey}</kbd>
+                        <kbd>j/k</kbd>
+                      </div>
+                      or
+                      <div className="help-menu-shortcuts-keys">
+                        <kbd>↑/↓</kbd>
+                      </div>
+                      <span>Navigation</span>
+                    </div>
+                    <div className="help-menu-shortcuts-item">
+                      <div className="help-menu-shortcuts-keys">
+                        <kbd>{cmdKey}</kbd>
+                        <kbd>e</kbd>
+                      </div>
+                      <span>Toggle narrow screen</span>
+                    </div>
+                    <div className="help-menu-shortcuts-item">
+                      <div className="help-menu-shortcuts-keys">
+                        <kbd>←/→</kbd>
+                      </div>
+                      <span>Switch workspaces</span>
+                    </div>
+                    <div className="help-menu-shortcuts-item">
+                      <div className="help-menu-shortcuts-keys">
+                        <kbd>{cmdKey}</kbd>
+                        <kbd>←/→</kbd>
+                      </div>
+                      <span>Move note between workspaces</span>
+                    </div>
+                    <div className="help-menu-shortcuts-item">
+                      <div className="help-menu-shortcuts-keys">
+                        <kbd>{cmdKey}</kbd>
+                        <kbd>h</kbd>
+                      </div>
+                      <span>Pin note to all workspaces</span>
+                    </div>
+                  </div>
+                  <button onClick={() => setIsHelpMenuOpen(false)}>close</button>
+                </div>
+              </>,
+              document.body
+            )}
+          <button
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setMoreMenuPosition({
+                x: window.innerWidth - (rect.x + rect.width),
+                y: rect.y + rect.height + 4,
+              });
+            }}
+            aria-label="More"
+            title="More"
+          >
+            <FiMoreHorizontal size={14} />
+          </button>
+          {moreMenuPosition && (
+            <>
+              <div
+                style={{
+                  width: "100vw",
+                  height: "100vh",
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                }}
+                onClick={() => {
+                  setMoreMenuPosition(null);
+                }}
+              />
+              <div
+                style={{
+                  position: "fixed",
+                  right: moreMenuPosition.x,
+                  top: moreMenuPosition.y,
+                  zIndex: 100,
+                }}
+                className="more-menu"
+              >
+                <button
+                  onClick={() => {
+                    setMoreMenuPosition(null);
+                    setIsUsingVim(!isUsingVim);
+                  }}
+                >
+                  {isUsingVim ? "no vim" : "vim"}
+                </button>
+                <button
+                  onClick={() => {
+                    setMoreMenuPosition(null);
+                    toggleTheme();
+                  }}
+                >
+                  {currentTheme === "light" ? "dark" : "light"}
+                </button>
+                <button
+                  onClick={() => {
+                    setMoreMenuPosition(null);
+                    backupDataToSafeLocation(database);
+                  }}
+                >
+                  backup
+                </button>
+                <button
+                  tabIndex={-1}
+                  onClick={() => {
+                    setMoreMenuPosition(null);
+                    exportDatabase();
+                  }}
+                >
+                  export
+                </button>
+                <button
+                  tabIndex={-1}
+                  onClick={() => {
+                    setMoreMenuPosition(null);
+                    fileInputDomRef.current?.click();
+                  }}
+                >
+                  import
+                </button>
+                {textValue && (
+                  <button
+                    tabIndex={-1}
+                    onClick={() => {
+                      setMoreMenuPosition(null);
+                      openNewNote("");
+                    }}
+                  >
+                    new
+                  </button>
+                )}
+                <div
+                  style={{
+                    height: "1px",
+                    width: "100%",
+                    backgroundColor: "var(--border-color)",
+                    margin: "4px 6px",
+                    opacity: 0.5,
+                  }}
+                />
+                <a href="https://github.com/shaoruu/typehere.app" target="_blank" rel="noreferrer">
+                  <button tabIndex={-1}>github</button>
+                </a>
+                <button
+                  tabIndex={-1}
+                  onClick={() => {
+                    setMoreMenuPosition(null);
+                    setIsHelpMenuOpen(true);
+                  }}
+                >
+                  how
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+        {isCmdKMenuOpen &&
+          createPortal(
+            <>
+              <div
+                style={{
+                  backgroundColor: "var(--overlay-background-color)",
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 99,
+                }}
+                onClick={() => {
+                  setIsCmdKMenuOpen(false);
+                }}
+              />
+              <div
+                style={{
+                  zIndex: 100,
+                  position: "fixed",
+                  top: "25%",
+                  left: "50%",
+                  width: "360px",
+                  maxWidth: "calc(100vw - 32px)",
+                  transform: "translateX(-50%)",
+                  backgroundColor: "var(--note-background-color)",
+                  boxShadow: "0 8px 16px var(--box-shadow-color)",
+                  display: "flex",
+                  flexDirection: "column",
+                  borderRadius: 8,
+                  border: "1px solid var(--border-color)",
+                }}
+              >
+                <input
+                  autoFocus
+                  ref={cmdKInputDomRef}
+                  placeholder="Search for note"
+                  value={cmdKSearchQuery}
+                  onChange={(e) => {
+                    setCmdKSearchQuery(e.target.value);
+                    setSelectedCmdKSuggestionIndex(0);
+                  }}
+                  style={{
+                    padding: "8px 10px",
+                    outline: "none",
+                    border: "1px solid var(--border-color)",
+                    borderRadius: 6,
+                    margin: "8px",
+                    marginBottom: 6,
+                    fontSize: "0.95rem",
+                  }}
+                />
+                <div
+                  className="notes-list no-scrollbar"
+                  style={{
+                    maxHeight: "min(320px, 40vh)",
+                    overflow: "auto",
+                    display: "flex",
+                    border: "none",
+                    flexDirection: "column",
+                    gap: 4,
+                    padding: "4px 8px 8px 8px",
+                  }}
+                >
+                  {cmdKSuggestions.map((suggestion, index) => {
+                    if (suggestion.type === "note") {
+                      const note = suggestion.note;
+                      const title = getNoteTitle(note);
+                      const createdFormatted = formatDateCompact(note.createdAt);
+                      const updatedFormatted = formatDateCompact(note.updatedAt);
+                      const showBothDates = note.createdAt !== note.updatedAt;
+
+                      return (
+                        <div
+                          key={`note-${note.id}-${index}`}
+                          id={`note-list-cmdk-item-${index}`}
+                          className="note-list-item"
+                          onClick={() => {
+                            openNote(note.id);
+                          }}
+                          style={{
+                            backgroundColor:
+                              index === selectedCmdKSuggestionIndex
+                                ? "var(--note-selected-background-color)"
+                                : "var(--note-background-color)",
+                          }}
+                        >
+                          <div className="note-list-item-top">
+                            <div
+                              className="note-list-item-title"
+                              style={{
+                                fontWeight: note.id === currentNoteId ? "bold" : "normal",
+                                fontStyle: title ? "normal" : "italic",
+                                color: title
+                                  ? "var(--dark-color)"
+                                  : "var(--untitled-note-title-color)",
+                              }}
+                            >
+                              {isAltKeyDown && index + 1 <= digitCount && (
+                                <div
+                                  style={{
+                                    display: "inline-block",
+                                    color: "var(--secondary-dark-color)",
+                                    marginRight: "4px",
+                                    fontSize: "0.8rem",
+                                  }}
+                                >
+                                  {index + 1}
+                                </div>
+                              )}
+                              {note.isHidden && (
+                                <MdVisibilityOff
+                                  style={{
+                                    color: "var(--hidden-color)",
+                                    marginRight: "4px",
+                                    fontSize: "0.8rem",
+                                  }}
+                                />
+                              )}
+                              {note.isPinned && (
+                                <FaMapPin
+                                  style={{
+                                    marginRight: "4px",
+                                    color: "var(--pin-color)",
+                                    fontSize: "0.8rem",
+                                  }}
+                                />
+                              )}
+                              <span>{title.trim() || "New Note"}</span>
+                            </div>
+                            <button
+                              className="note-list-item-delete-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteNote(note.id);
+                              }}
+                              style={{
+                                visibility:
+                                  workspaceNotes.length > 1 && index === selectedCmdKSuggestionIndex
+                                    ? "visible"
+                                    : "hidden",
+                                pointerEvents:
+                                  workspaceNotes.length > 1 && index === selectedCmdKSuggestionIndex
+                                    ? "auto"
+                                    : "none",
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                          <div
+                            className="note-list-item-timestamp"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              flexDirection: "row",
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            {note.workspace && (
+                              <>
+                                <span
+                                  style={{
+                                    overflow: "hidden",
+                                    whiteSpace: "nowrap",
+                                    textOverflow: "ellipsis",
+                                    direction: "rtl",
+                                  }}
+                                >
+                                  {note.workspace}
+                                </span>
+                                <span>•</span>
+                              </>
+                            )}
+                            {showBothDates ? (
+                              <>
+                                <span title="Created">{createdFormatted}</span>
+                                <span>→</span>
+                                <span title="Updated">{updatedFormatted}</span>
+                              </>
+                            ) : (
+                              <span>{updatedFormatted}</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    const { title, onAction, content, color } = suggestion;
+
+                    return (
+                      <div
+                        key={`action-${title}-${index}`}
+                        id={`note-list-cmdk-item-${index}`}
+                        className="note-list-item"
+                        onClick={onAction}
+                        style={{
+                          backgroundColor:
+                            index === selectedCmdKSuggestionIndex
+                              ? "var(--note-selected-background-color)"
+                              : "var(--note-background-color)",
+                          position: "relative",
+                        }}
+                      >
+                        {color && (
+                          <div
+                            style={{
+                              top: 2,
+                              bottom: 2,
+                              left: 0,
+                              width: 3,
+                              borderRadius: 4,
+                              position: "absolute",
+                              background: color,
+                              opacity: index === selectedCmdKSuggestionIndex ? 1.0 : 0.5,
+                            }}
+                          ></div>
+                        )}
+                        <div className="note-list-item-top">
+                          <div
+                            className="note-list-item-title"
+                            style={{
+                              fontWeight: "normal",
+                              fontStyle: "normal",
+                              color: "var(--dark-color)",
+                            }}
+                          >
+                            {title}
+                          </div>
+                          <p
+                            style={{
+                              marginLeft: "4px",
+                              fontSize: "0.8rem",
+                              display: "flex",
+                              alignItems: "center",
+                              padding: "1px 4px",
+                              borderRadius: "4px",
+                              cursor: "pointer",
+                              color: "var(--on-fill-color)",
+                              background: "var(--keyboard-key-color)",
+                              borderRight: "2px solid var(--border-color)",
+                              borderBottom: "2px solid var(--border-color)",
+                              borderLeft: "none",
+                              borderTop: "none",
+                              visibility:
+                                index === selectedCmdKSuggestionIndex ? "visible" : "hidden",
+                            }}
+                          >
+                            Enter{" "}
+                            <span
+                              style={{
+                                marginLeft: "4px",
+                                marginBottom: "1px",
+                              }}
+                            >
+                              ↵
+                            </span>
+                          </p>
+                        </div>
+                        <div
+                          className="note-list-item-timestamp"
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
+                          <p>{content}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div
+                  style={{
+                    outline: "none",
+                    padding: "6px 12px",
+                    fontSize: "0.75rem",
+                    borderTop: "1px solid var(--border-color)",
+                    color: "var(--dark-color)",
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    opacity: 0.5,
+                  }}
+                >
+                  {currentWorkspace ? `workspace: [${currentWorkspace}]` : `all notes`}
+                </div>
+              </div>
+            </>,
+            document.body
+          )}
+        <input
+          type="file"
+          style={{ display: "none" }}
+          ref={fileInputDomRef}
+          onChange={(e) => {
+            const fileReader = new FileReader();
+            const target = e.target as HTMLInputElement;
+            if (!target.files) return;
+            fileReader.readAsText(target.files[0], "UTF-8");
+            fileReader.onload = (e) => {
+              const decompressedContent = LZString.decompressFromEncodedURIComponent(
+                e.target?.result as string
+              );
+              if (decompressedContent) {
+                const content = JSON.parse(decompressedContent);
+                setDatabase(content);
+                setCurrentWorkspace(null);
+              }
+            };
+          }}
+        />
+        {isPasswordModalOpen &&
+          isElectron() &&
           createPortal(
             <>
               <div
@@ -2163,605 +2665,90 @@ function App() {
                   background: "var(--overlay-background-color)",
                   top: 0,
                   left: 0,
-                  zIndex: 10,
-                }}
-                onClick={() => {
-                  setIsHelpMenuOpen(false);
+                  zIndex: 1000,
                 }}
               />
-              <div className="help-menu">
-                <h3>Keyboard Shortcuts</h3>
-                <div className="help-menu-shortcuts">
-                  <div className="help-menu-shortcuts-item">
-                    <div className="help-menu-shortcuts-keys">
-                      <kbd>{cmdKey}</kbd>
-                      <kbd>k/p</kbd>
-                    </div>
-                    <span>Open notes search</span>
-                  </div>
-                  <div className="help-menu-shortcuts-item">
-                    <div className="help-menu-shortcuts-keys">
-                      <kbd>{cmdKey}</kbd>
-                      <kbd>⇧</kbd>
-                      <kbd>f</kbd>
-                    </div>
-                    <span>Search all notes</span>
-                  </div>
-                  <div className="help-menu-shortcuts-item">
-                    <div className="help-menu-shortcuts-keys">
-                      <kbd>{cmdKey}</kbd>
-                      <kbd>⇧</kbd>
-                      <kbd>⏎</kbd>
-                    </div>
-                    <span>Create empty note</span>
-                  </div>
-                  <div className="help-menu-shortcuts-item">
-                    <div className="help-menu-shortcuts-keys">
-                      <kbd>{cmdKey}</kbd>
-                      <kbd>j/k</kbd>
-                    </div>
-                    or
-                    <div className="help-menu-shortcuts-keys">
-                      <kbd>↑/↓</kbd>
-                    </div>
-                    <span>Navigation</span>
-                  </div>
-                  <div className="help-menu-shortcuts-item">
-                    <div className="help-menu-shortcuts-keys">
-                      <kbd>{cmdKey}</kbd>
-                      <kbd>e</kbd>
-                    </div>
-                    <span>Toggle narrow screen</span>
-                  </div>
-                  <div className="help-menu-shortcuts-item">
-                    <div className="help-menu-shortcuts-keys">
-                      <kbd>←/→</kbd>
-                    </div>
-                    <span>Switch workspaces</span>
-                  </div>
-                  <div className="help-menu-shortcuts-item">
-                    <div className="help-menu-shortcuts-keys">
-                      <kbd>{cmdKey}</kbd>
-                      <kbd>←/→</kbd>
-                    </div>
-                    <span>Move note between workspaces</span>
-                  </div>
-                  <div className="help-menu-shortcuts-item">
-                    <div className="help-menu-shortcuts-keys">
-                      <kbd>{cmdKey}</kbd>
-                      <kbd>h</kbd>
-                    </div>
-                    <span>Pin note to all workspaces</span>
-                  </div>
-                </div>
-                <button onClick={() => setIsHelpMenuOpen(false)}>close</button>
+              <div
+                style={{
+                  zIndex: 1001,
+                  position: "fixed",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  width: "360px",
+                  maxWidth: "calc(100vw - 32px)",
+                  backgroundColor: "var(--note-background-color)",
+                  boxShadow: "0 8px 16px var(--box-shadow-color)",
+                  borderRadius: 8,
+                  border: "1px solid var(--border-color)",
+                  padding: "24px",
+                }}
+              >
+                <h2
+                  style={{
+                    margin: "0 0 8px 0",
+                    fontSize: "1.2rem",
+                    color: "var(--dark-color)",
+                  }}
+                >
+                  {isSettingPassword ? "Set Master Password" : "Enter Password"}
+                </h2>
+                <p
+                  style={{
+                    margin: "0 0 16px 0",
+                    fontSize: "0.9rem",
+                    color: "var(--dark-color)",
+                    opacity: 0.7,
+                  }}
+                >
+                  {isSettingPassword
+                    ? "Create a password to encrypt your notes on disk for CLI access."
+                    : "Enter your password to unlock encrypted notes."}
+                </p>
+                <input
+                  type="password"
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handlePasswordSubmit();
+                    }
+                  }}
+                  placeholder="Password"
+                  autoFocus
+                  style={{
+                    width: "100%",
+                    padding: "8px 10px",
+                    outline: "none",
+                    border: "1px solid var(--border-color)",
+                    borderRadius: 6,
+                    fontSize: "0.95rem",
+                    marginBottom: "16px",
+                    backgroundColor: "var(--note-background-color)",
+                    color: "var(--dark-color)",
+                  }}
+                />
+                <button
+                  onClick={handlePasswordSubmit}
+                  style={{
+                    width: "100%",
+                    padding: "8px 16px",
+                    backgroundColor: "var(--keyboard-key-color)",
+                    color: "var(--on-fill-color)",
+                    border: "1px solid var(--border-color)",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    fontSize: "0.95rem",
+                  }}
+                >
+                  {isSettingPassword ? "Set Password" : "Unlock"}
+                </button>
               </div>
             </>,
             document.body
           )}
-        <button
-          onClick={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            setMoreMenuPosition({
-              x: window.innerWidth - (rect.x + rect.width),
-              y: rect.y + rect.height + 4,
-            });
-          }}
-          aria-label="More"
-          title="More"
-        >
-          <FiMoreHorizontal size={14} />
-        </button>
-        {moreMenuPosition && (
-          <>
-            <div
-              style={{
-                width: "100vw",
-                height: "100vh",
-                position: "fixed",
-                top: 0,
-                left: 0,
-              }}
-              onClick={() => {
-                setMoreMenuPosition(null);
-              }}
-            />
-            <div
-              style={{
-                position: "fixed",
-                right: moreMenuPosition.x,
-                top: moreMenuPosition.y,
-                zIndex: 100,
-              }}
-              className="more-menu"
-            >
-              <button
-                onClick={() => {
-                  setMoreMenuPosition(null);
-                  setIsUsingVim(!isUsingVim);
-                }}
-              >
-                {isUsingVim ? "no vim" : "vim"}
-              </button>
-              <button
-                onClick={() => {
-                  setMoreMenuPosition(null);
-                  toggleTheme();
-                }}
-              >
-                {currentTheme === "light" ? "dark" : "light"}
-              </button>
-              <button
-                onClick={() => {
-                  setMoreMenuPosition(null);
-                  backupDataToSafeLocation(database);
-                }}
-              >
-                backup
-              </button>
-              <button
-                tabIndex={-1}
-                onClick={() => {
-                  setMoreMenuPosition(null);
-                  exportDatabase();
-                }}
-              >
-                export
-              </button>
-              <button
-                tabIndex={-1}
-                onClick={() => {
-                  setMoreMenuPosition(null);
-                  fileInputDomRef.current?.click();
-                }}
-              >
-                import
-              </button>
-              {textValue && (
-                <button
-                  tabIndex={-1}
-                  onClick={() => {
-                    setMoreMenuPosition(null);
-                    openNewNote("");
-                  }}
-                >
-                  new
-                </button>
-              )}
-              <div
-                style={{
-                  height: "1px",
-                  width: "100%",
-                  backgroundColor: "var(--border-color)",
-                  margin: "4px 6px",
-                  opacity: 0.5,
-                }}
-              />
-              <a href="https://github.com/shaoruu/typehere.app" target="_blank" rel="noreferrer">
-                <button tabIndex={-1}>github</button>
-              </a>
-              <button
-                tabIndex={-1}
-                onClick={() => {
-                  setMoreMenuPosition(null);
-                  setIsHelpMenuOpen(true);
-                }}
-              >
-                how
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-      {isCmdKMenuOpen &&
-        createPortal(
-          <>
-            <div
-              style={{
-                backgroundColor: "var(--overlay-background-color)",
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                zIndex: 99,
-              }}
-              onClick={() => {
-                setIsCmdKMenuOpen(false);
-              }}
-            />
-            <div
-              style={{
-                zIndex: 100,
-                position: "fixed",
-                top: "25%",
-                left: "50%",
-                width: "360px",
-                maxWidth: "calc(100vw - 32px)",
-                transform: "translateX(-50%)",
-                backgroundColor: "var(--note-background-color)",
-                boxShadow: "0 8px 16px var(--box-shadow-color)",
-                display: "flex",
-                flexDirection: "column",
-                borderRadius: 8,
-                border: "1px solid var(--border-color)",
-              }}
-            >
-              <input
-                autoFocus
-                ref={cmdKInputDomRef}
-                placeholder="Search for note"
-                value={cmdKSearchQuery}
-                onChange={(e) => {
-                  setCmdKSearchQuery(e.target.value);
-                  setSelectedCmdKSuggestionIndex(0);
-                }}
-                style={{
-                  padding: "8px 10px",
-                  outline: "none",
-                  border: "1px solid var(--border-color)",
-                  borderRadius: 6,
-                  margin: "8px",
-                  marginBottom: 6,
-                  fontSize: "0.95rem",
-                }}
-              />
-              <div
-                className="notes-list no-scrollbar"
-                style={{
-                  maxHeight: "min(320px, 40vh)",
-                  overflow: "auto",
-                  display: "flex",
-                  border: "none",
-                  flexDirection: "column",
-                  gap: 4,
-                  padding: "4px 8px 8px 8px",
-                }}
-              >
-                {cmdKSuggestions.map((suggestion, index) => {
-                  if (suggestion.type === "note") {
-                    const note = suggestion.note;
-                    const title = getNoteTitle(note);
-                    const createdFormatted = formatDateCompact(note.createdAt);
-                    const updatedFormatted = formatDateCompact(note.updatedAt);
-                    const showBothDates = note.createdAt !== note.updatedAt;
-
-                    return (
-                      <div
-                        key={`note-${note.id}-${index}`}
-                        id={`note-list-cmdk-item-${index}`}
-                        className="note-list-item"
-                        onClick={() => {
-                          openNote(note.id);
-                        }}
-                        style={{
-                          backgroundColor:
-                            index === selectedCmdKSuggestionIndex
-                              ? "var(--note-selected-background-color)"
-                              : "var(--note-background-color)",
-                        }}
-                      >
-                        <div className="note-list-item-top">
-                          <div
-                            className="note-list-item-title"
-                            style={{
-                              fontWeight: note.id === currentNoteId ? "bold" : "normal",
-                              fontStyle: title ? "normal" : "italic",
-                              color: title
-                                ? "var(--dark-color)"
-                                : "var(--untitled-note-title-color)",
-                            }}
-                          >
-                            {isAltKeyDown && index + 1 <= digitCount && (
-                              <div
-                                style={{
-                                  display: "inline-block",
-                                  color: "var(--secondary-dark-color)",
-                                  marginRight: "4px",
-                                  fontSize: "0.8rem",
-                                }}
-                              >
-                                {index + 1}
-                              </div>
-                            )}
-                            {note.isHidden && (
-                              <MdVisibilityOff
-                                style={{
-                                  color: "var(--hidden-color)",
-                                  marginRight: "4px",
-                                  fontSize: "0.8rem",
-                                }}
-                              />
-                            )}
-                            {note.isPinned && (
-                              <FaMapPin
-                                style={{
-                                  marginRight: "4px",
-                                  color: "var(--pin-color)",
-                                  fontSize: "0.8rem",
-                                }}
-                              />
-                            )}
-                            <span>{title.trim() || "New Note"}</span>
-                          </div>
-                          <button
-                            className="note-list-item-delete-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteNote(note.id);
-                            }}
-                            style={{
-                              visibility:
-                                workspaceNotes.length > 1 && index === selectedCmdKSuggestionIndex
-                                  ? "visible"
-                                  : "hidden",
-                              pointerEvents:
-                                workspaceNotes.length > 1 && index === selectedCmdKSuggestionIndex
-                                  ? "auto"
-                                  : "none",
-                            }}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                        <div
-                          className="note-list-item-timestamp"
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "4px",
-                            flexDirection: "row",
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          {note.workspace && (
-                            <>
-                              <span
-                                style={{
-                                  overflow: "hidden",
-                                  whiteSpace: "nowrap",
-                                  textOverflow: "ellipsis",
-                                  direction: "rtl",
-                                }}
-                              >
-                                {note.workspace}
-                              </span>
-                              <span>•</span>
-                            </>
-                          )}
-                          {showBothDates ? (
-                            <>
-                              <span title="Created">{createdFormatted}</span>
-                              <span>→</span>
-                              <span title="Updated">{updatedFormatted}</span>
-                            </>
-                          ) : (
-                            <span>{updatedFormatted}</span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  const { title, onAction, content, color } = suggestion;
-
-                  return (
-                    <div
-                      key={`action-${title}-${index}`}
-                      id={`note-list-cmdk-item-${index}`}
-                      className="note-list-item"
-                      onClick={onAction}
-                      style={{
-                        backgroundColor:
-                          index === selectedCmdKSuggestionIndex
-                            ? "var(--note-selected-background-color)"
-                            : "var(--note-background-color)",
-                        position: "relative",
-                      }}
-                    >
-                      {color && (
-                        <div
-                          style={{
-                            top: 2,
-                            bottom: 2,
-                            left: 0,
-                            width: 3,
-                            borderRadius: 4,
-                            position: "absolute",
-                            background: color,
-                            opacity: index === selectedCmdKSuggestionIndex ? 1.0 : 0.5,
-                          }}
-                        ></div>
-                      )}
-                      <div className="note-list-item-top">
-                        <div
-                          className="note-list-item-title"
-                          style={{
-                            fontWeight: "normal",
-                            fontStyle: "normal",
-                            color: "var(--dark-color)",
-                          }}
-                        >
-                          {title}
-                        </div>
-                        <p
-                          style={{
-                            marginLeft: "4px",
-                            fontSize: "0.8rem",
-                            display: "flex",
-                            alignItems: "center",
-                            padding: "1px 4px",
-                            borderRadius: "4px",
-                            cursor: "pointer",
-                            color: "var(--on-fill-color)",
-                            background: "var(--keyboard-key-color)",
-                            borderRight: "2px solid var(--border-color)",
-                            borderBottom: "2px solid var(--border-color)",
-                            borderLeft: "none",
-                            borderTop: "none",
-                            visibility:
-                              index === selectedCmdKSuggestionIndex ? "visible" : "hidden",
-                          }}
-                        >
-                          Enter{" "}
-                          <span
-                            style={{
-                              marginLeft: "4px",
-                              marginBottom: "1px",
-                            }}
-                          >
-                            ↵
-                          </span>
-                        </p>
-                      </div>
-                      <div
-                        className="note-list-item-timestamp"
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <p>{content}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div
-                style={{
-                  outline: "none",
-                  padding: "6px 12px",
-                  fontSize: "0.75rem",
-                  borderTop: "1px solid var(--border-color)",
-                  color: "var(--dark-color)",
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  opacity: 0.5,
-                }}
-              >
-                {currentWorkspace ? `workspace: [${currentWorkspace}]` : `all notes`}
-              </div>
-            </div>
-          </>,
-          document.body
-        )}
-      <input
-        type="file"
-        style={{ display: "none" }}
-        ref={fileInputDomRef}
-        onChange={(e) => {
-          const fileReader = new FileReader();
-          const target = e.target as HTMLInputElement;
-          if (!target.files) return;
-          fileReader.readAsText(target.files[0], "UTF-8");
-          fileReader.onload = (e) => {
-            const decompressedContent = LZString.decompressFromEncodedURIComponent(
-              e.target?.result as string
-            );
-            if (decompressedContent) {
-              const content = JSON.parse(decompressedContent);
-              setDatabase(content);
-              setCurrentWorkspace(null);
-            }
-          };
-        }}
-      />
-      {isPasswordModalOpen &&
-        isElectron() &&
-        createPortal(
-          <>
-            <div
-              style={{
-                width: "100vw",
-                height: "100vh",
-                position: "fixed",
-                background: "var(--overlay-background-color)",
-                top: 0,
-                left: 0,
-                zIndex: 1000,
-              }}
-            />
-            <div
-              style={{
-                zIndex: 1001,
-                position: "fixed",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                width: "360px",
-                maxWidth: "calc(100vw - 32px)",
-                backgroundColor: "var(--note-background-color)",
-                boxShadow: "0 8px 16px var(--box-shadow-color)",
-                borderRadius: 8,
-                border: "1px solid var(--border-color)",
-                padding: "24px",
-              }}
-            >
-              <h2
-                style={{
-                  margin: "0 0 8px 0",
-                  fontSize: "1.2rem",
-                  color: "var(--dark-color)",
-                }}
-              >
-                {isSettingPassword ? "Set Master Password" : "Enter Password"}
-              </h2>
-              <p
-                style={{
-                  margin: "0 0 16px 0",
-                  fontSize: "0.9rem",
-                  color: "var(--dark-color)",
-                  opacity: 0.7,
-                }}
-              >
-                {isSettingPassword
-                  ? "Create a password to encrypt your notes on disk for CLI access."
-                  : "Enter your password to unlock encrypted notes."}
-              </p>
-              <input
-                type="password"
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handlePasswordSubmit();
-                  }
-                }}
-                placeholder="Password"
-                autoFocus
-                style={{
-                  width: "100%",
-                  padding: "8px 10px",
-                  outline: "none",
-                  border: "1px solid var(--border-color)",
-                  borderRadius: 6,
-                  fontSize: "0.95rem",
-                  marginBottom: "16px",
-                  backgroundColor: "var(--note-background-color)",
-                  color: "var(--dark-color)",
-                }}
-              />
-              <button
-                onClick={handlePasswordSubmit}
-                style={{
-                  width: "100%",
-                  padding: "8px 16px",
-                  backgroundColor: "var(--keyboard-key-color)",
-                  color: "var(--on-fill-color)",
-                  border: "1px solid var(--border-color)",
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  fontSize: "0.95rem",
-                }}
-              >
-                {isSettingPassword ? "Set Password" : "Unlock"}
-              </button>
-            </div>
-          </>,
-          document.body
-        )}
-    </main>
+      </main>
+    </>
   );
 }
 

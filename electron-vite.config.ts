@@ -1,28 +1,46 @@
-import { rmSync } from 'node:fs';
-import path from 'node:path';
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import electron from 'vite-plugin-electron/simple';
-import { replaceCodePlugin } from 'vite-plugin-replace';
-import pkg from './package.json';
+import { rmSync } from "node:fs";
+import path from "node:path";
+import { defineConfig, Plugin } from "vite";
+import react from "@vitejs/plugin-react";
+import electron from "vite-plugin-electron/simple";
+import { replaceCodePlugin } from "vite-plugin-replace";
+import pkg from "./package.json";
 
-// https://vitejs.dev/config/
+function virtualPwaRegisterStub(): Plugin {
+  const virtualModuleId = "virtual:pwa-register";
+  const resolvedVirtualModuleId = "\0" + virtualModuleId;
+
+  return {
+    name: "virtual-pwa-register-stub",
+    resolveId(id) {
+      if (id === virtualModuleId) {
+        return resolvedVirtualModuleId;
+      }
+    },
+    load(id) {
+      if (id === resolvedVirtualModuleId) {
+        return `export function registerSW() { return () => {}; }`;
+      }
+    },
+  };
+}
+
 export default defineConfig(({ command }) => {
-  rmSync('dist-electron', { recursive: true, force: true });
+  rmSync("dist-electron", { recursive: true, force: true });
 
-  const isServe = command === 'serve';
-  const isBuild = command === 'build';
+  const isServe = command === "serve";
+  const isBuild = command === "build";
   const sourcemap = isServe || !!process.env.VSCODE_DEBUG;
 
   const replacementPlugin = replaceCodePlugin({
     replacements: [
       {
-        from: '__START_REMOVE_FOR_ELECTRON__',
-        to: '/*',
+        from: "__START_REMOVE_FOR_ELECTRON__",
+        to: "/*",
       },
       {
-        from: '__END_REMOVE_FOR_ELECTRON__',
-        to: '*/',
+        from: "__END_REMOVE_FOR_ELECTRON__",
+        to: "*/",
       },
     ],
   });
@@ -30,21 +48,20 @@ export default defineConfig(({ command }) => {
   return {
     resolve: {
       alias: {
-        '@': path.join(__dirname, 'src'),
+        "@": path.join(__dirname, "src"),
       },
     },
     plugins: [
+      virtualPwaRegisterStub(),
       replacementPlugin,
       react(),
       electron({
         main: {
           // Shortcut of `build.lib.entry`
-          entry: 'electron/main/index.ts',
+          entry: "electron/main/index.ts",
           onstart(args) {
             if (process.env.VSCODE_DEBUG) {
-              console.log(
-                /* For `.vscode/.debug.script.mjs` */ '[startup] Electron App',
-              );
+              console.log("[startup] Electron App");
             } else {
               args.startup();
             }
@@ -54,11 +71,9 @@ export default defineConfig(({ command }) => {
             build: {
               sourcemap,
               minify: isBuild,
-              outDir: 'dist-electron/main',
+              outDir: "dist-electron/main",
               rollupOptions: {
-                external: Object.keys(
-                  'dependencies' in pkg ? pkg.dependencies : {},
-                ),
+                external: Object.keys("dependencies" in pkg ? pkg.dependencies : {}),
               },
             },
           },
@@ -66,17 +81,15 @@ export default defineConfig(({ command }) => {
         preload: {
           // Shortcut of `build.rollupOptions.input`.
           // Preload scripts may contain Web assets, so use the `build.rollupOptions.input` instead `build.lib.entry`.
-          input: 'electron/preload/index.ts',
+          input: "electron/preload/index.ts",
           vite: {
             plugins: [replacementPlugin],
             build: {
-              sourcemap: sourcemap ? 'inline' : undefined, // #332
+              sourcemap: sourcemap ? "inline" : undefined, // #332
               minify: isBuild,
-              outDir: 'dist-electron/preload',
+              outDir: "dist-electron/preload",
               rollupOptions: {
-                external: Object.keys(
-                  'dependencies' in pkg ? pkg.dependencies : {},
-                ),
+                external: Object.keys("dependencies" in pkg ? pkg.dependencies : {}),
               },
             },
           },

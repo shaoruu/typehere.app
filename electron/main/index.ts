@@ -4,14 +4,7 @@ import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
 import Store from "electron-store";
-import {
-  generateSalt,
-  deriveKey,
-  encrypt,
-  decrypt,
-  hashPasswordForStorage,
-  hashNoteId,
-} from "./crypto";
+import { generateSalt, encrypt, decrypt, hashPasswordForStorage, hashNoteId } from "./crypto";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -73,7 +66,7 @@ const passwordStore = new Store<PasswordStore>({
   defaults: {},
 });
 
-const TYPEHERE_DIR = path.join(os.homedir(), ".typehere");
+const TYPEHERE_DIR = path.join(os.homedir(), VITE_DEV_SERVER_URL ? ".typehere-dev" : ".typehere");
 const NOTES_DIR = path.join(TYPEHERE_DIR, "notes");
 const SALT_FILE = path.join(TYPEHERE_DIR, ".salt");
 const METADATA_FILE = path.join(TYPEHERE_DIR, ".metadata.enc");
@@ -106,7 +99,7 @@ async function createWindow() {
     height,
     frame: false, // make the window frameless
     titleBarStyle: "hidden", // This hides the native title bar but keeps the traffic lights
-    trafficLightPosition: { x: 10, y: 8 }, // Adjust the position of traffic lights
+    trafficLightPosition: { x: 10, y: 12 }, // Adjust the position of traffic lights
     webPreferences: {
       preload,
       // Warning: Enable nodeIntegration and disable contextIsolation is not secure in production

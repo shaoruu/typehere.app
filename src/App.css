@@ -1,18 +1,6 @@
 .custom-title-bar {
-  height: 28px;
+  height: 38px;
+  width: 100%;
   background-color: var(--note-background-color);
-  display: flex;
-  align-items: center;
   -webkit-app-region: drag;
-}
-
-.traffic-light-placeholder {
-  width: 70px; /* Adjust this value to match the width of the traffic lights */
-  height: 100%;
-  -webkit-app-region: no-drag;
-}
-
-.drag-region {
-  flex: 1;
-  height: 100%;
 }
