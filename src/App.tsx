@@ -1435,7 +1435,8 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Prevent escape from minimizing the window
+      if (isPasswordModalOpen) return;
+
       if (e.code === "Escape") {
         e.preventDefault();
       }
@@ -1721,6 +1722,7 @@ function App() {
     shouldShowHiddenNotes,
     historyIndex,
     historyStack,
+    isPasswordModalOpen,
   ]);
 
   useEffect(() => {
@@ -2030,6 +2032,14 @@ function App() {
     return () => clearTimeout(timeoutId);
   }, [database, encryptionKey, fsInitialized, syncToFilesystem]);
 
+  useEffect(() => {
+    document.fonts.ready.then(() => {
+      if (aceEditorRef.current) {
+        aceEditorRef.current.editor.renderer.updateFull();
+      }
+    });
+  }, []);
+
   const handlePasswordSubmit = async () => {
     if (!window.electronFS || !passwordInput) {
       return;
@@ -2094,6 +2104,7 @@ function App() {
               wrap: true,
               highlightActiveLine: false,
               showPrintMargin: false,
+              fontFamily: "'Berkeley Mono', 'JetBrains Mono', monospace",
             }}
             fontSize="1rem"
             onCursorChange={(e) => {
