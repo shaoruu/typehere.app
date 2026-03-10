@@ -39,9 +39,6 @@
     "dev:electron": "vite --config electron-vite.config.ts",
     "build": "tsc && vite build",
     "build:electron": "tsc && vite build --config electron-vite.config.ts && electron-builder",
-    "build:cli": "cd cli && go build -o th",
-    "install:cli": "pnpm run build:cli && cp cli/th ~/.local/bin/th && chmod +x ~/.local/bin/th",
-    "uninstall:cli": "node scripts/uninstall-cli.cjs",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "open": "open release/0.0.1/mac-arm64/",
     "preview": "vite preview",
@@ -53,14 +50,10 @@
       "prettier --write"
     ]
   },
-  "bin": {
-    "th": "./dist-cli/th.js"
-  },
   "dependencies": {
     "@seznam/compose-react-refs": "^1.0.6",
     "@vercel/analytics": "^1.2.2",
     "ace-builds": "^1.32.6",
-    "crypto-js": "^4.2.0",
     "electron-store": "^9.0.0",
     "fuse.js": "^7.0.0",
     "is-electron": "^2.2.2",
@@ -72,7 +65,6 @@
     "vite-plugin-replace": "^0.1.1"
   },
   "devDependencies": {
-    "@types/crypto-js": "^4.2.2",
     "@types/node": "^20.10.0",
     "@types/react": "^18.2.55",
     "@types/react-dom": "^18.2.19",

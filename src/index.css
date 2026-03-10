@@ -342,6 +342,10 @@ body.show-scrollbar #controls {
   font-size: 1rem;
 }
 
+body.electron .ace_placeholder {
+  padding-left: 70px !important;
+}
+
 .ace_search {
   transform: scale(0.888888888);
   transform-origin: top right;

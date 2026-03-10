@@ -20,35 +20,6 @@ contextBridge.exposeInMainWorld("ipcRenderer", {
   },
 });
 
-let fileChangedListener: ((_event: Electron.IpcRendererEvent, data: { eventType: string; filename: string }) => void) | null = null;
-
-contextBridge.exposeInMainWorld("electronFS", {
-  init: () => ipcRenderer.invoke("fs:init"),
-  setPassword: (password: string) => ipcRenderer.invoke("fs:set-password", password),
-  verifyPassword: (password: string) => ipcRenderer.invoke("fs:verify-password", password),
-  readNotes: (encryptionKey: string) => ipcRenderer.invoke("fs:read-notes", encryptionKey),
-  writeNote: (noteId: string, content: string, encryptionKey: string) =>
-    ipcRenderer.invoke("fs:write-note", noteId, content, encryptionKey),
-  deleteNote: (noteId: string, encryptionKey: string) =>
-    ipcRenderer.invoke("fs:delete-note", noteId, encryptionKey),
-  writeMetadata: (metadata: unknown, encryptionKey: string) =>
-    ipcRenderer.invoke("fs:write-metadata", metadata, encryptionKey),
-  startWatching: () => ipcRenderer.invoke("fs:start-watching"),
-  stopWatching: () => ipcRenderer.invoke("fs:stop-watching"),
-  onFileChanged: (callback: (data: { eventType: string; filename: string }) => void) => {
-    if (fileChangedListener) {
-      ipcRenderer.off("fs:file-changed", fileChangedListener);
-    }
-    fileChangedListener = (_event, data) => callback(data);
-    ipcRenderer.on("fs:file-changed", fileChangedListener);
-  },
-  offFileChanged: () => {
-    if (fileChangedListener) {
-      ipcRenderer.off("fs:file-changed", fileChangedListener);
-      fileChangedListener = null;
-    }
-  },
-});
 
 // --------- Preload scripts loading ---------
 function domReady(condition: DocumentReadyState[] = ["complete", "interactive"]) {
